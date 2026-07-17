@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Employees - Xammer HRMS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+          integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}"/>
+    <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : ''}"/>
+    <style>
+        :root {
+            --primary: #FF8F00;
+            --primary-dark: #F57C00;
+            --dark-bg: #121212;
+            --content-bg: #1E1E1E;
+            --border-color: #303030;
+            --text-primary: #E0E0E0;
+            --text-secondary: #BDBDBD;
+            --text-muted: #9E9E9E;
+            --white-text: #FFFFFF;
+            --danger-text: #f44336;
+            --danger-bg: rgba(244, 67, 54, 0.15);
+            --success-text: #4caf50;
+            --success-bg: rgba(76, 175, 80, 0.15);
+            --warning-text: #ffc107;
+            --warning-bg: rgba(255, 193, 7, 0.15);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .sidebar-toggle-button {
+            position: fixed; top: 1.25rem; left: 1.25rem;
+            background: none; border: none; color: var(--primary);
+            font-size: 1.5rem; cursor: pointer; z-index: 1060;
+        }
+        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1045; display: none; transition: opacity 0.3s ease; }
+        .sidebar {
+            width: 260px; background-color: var(--content-bg);
+            padding: 2rem 1.5rem; position: fixed; height: 100%;
+            display: flex; flex-direction: column; justify-content: space-between;
+            border-right: 1px solid var(--border-color);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+            z-index: 1048; left: -260px; transition: left 0.3s ease;
+        }
+        .sidebar.open { left: 0; }
+        .sidebar img { max-width: 150px; height: auto; margin-bottom: 2.5rem; display: block; margin-left: auto; margin-right: auto; }
+        .nav-links { margin-top: 1rem; }
+        .nav-links a { display: flex; align-items: center; padding: 0.8rem 1.2rem; color: var(--text-secondary); text-decoration: none; border-radius: 8px; margin-bottom: 0.6rem; font-weight: 500; transition: all 0.3s ease; background-color: var(--content-bg); }
+        .nav-links a i { margin-right: 0.75rem; font-size: 1.1rem; color: var(--text-muted); }
+        .nav-links a:hover, .nav-links a.active { background-color: #2C2C2C; color: var(--primary); box-shadow: 3px 3px 10px rgba(255, 143, 0, 0.25); transform: translateX(4px); }
+        .nav-links a.active i { color: var(--primary); }
+        .logout { background: linear-gradient(to right, var(--primary), var(--primary-dark)); padding: 0.8rem 1.5rem; border-radius: 8px; text-align: center; font-weight: bold; color: var(--white-text); cursor: pointer; transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+        .logout:hover { background: linear-gradient(to right, var(--primary-dark), var(--primary)); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); transform: scale(1.02); }
+
+        .page-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2.5rem; width: 100%; margin-bottom: 1.5rem; }
+        .page-header-flank { flex: 1; display: flex; }
+        .page-header-flank-left { justify-content: flex-start; }
+        .page-header-flank-right { justify-content: flex-end; }
+        .page-header-main-title { display: flex; align-items: center; gap: 0.75rem; }
+        .page-header-main-title .page-header-icon { font-size: 1.8rem; color: var(--primary); }
+        .page-header-main-title h1 { font-size: 1.6rem; color: var(--white-text); margin: 0; font-weight: 700; font-family: 'Poppins', sans-serif; letter-spacing: -0.5px; line-height: 1.2; }
+        .page-header-right-content { color: var(--text-muted); font-size: 0.9rem; text-align: right; }
+
+        .main-content-wrapper { padding: 0 2.5rem 2.5rem 2.5rem; flex-grow: 1; display: flex; flex-direction: column; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: var(--white-text) !important; transition: all 0.2s ease; font-weight: 600; letter-spacing: 0.5px; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255, 143, 0, 0.4); }
+        .search-results { max-height: 300px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--primary) var(--content-bg); list-style: none; padding: 0; margin: 0; background-color: var(--content-bg); border: 1px solid var(--border-color); border-top: none; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); border-radius: 0 0 8px 8px; }
+        .search-results::-webkit-scrollbar { width: 6px; }
+        .search-results::-webkit-scrollbar-track { background: var(--content-bg); }
+        .search-results::-webkit-scrollbar-thumb { background-color: var(--primary); border-radius: 3px; }
+        .search-results li { padding: 0.75rem 1rem; cursor: pointer; color: var(--text-primary); transition: background-color 0.2s ease, color 0.2s ease; }
+        .search-results li:hover, .search-results li.active-suggestion { background-color: var(--primary); color: var(--white-text); }
+        .filter-container { background-color: var(--content-bg); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color); }
+        .search-input, .form-input, select.search-input, select.form-input { background-color: var(--dark-bg); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.75rem 1rem; border-radius: 8px; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .search-input:focus, .form-input:focus, select.search-input:focus, select.form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255, 143, 0, 0.3); outline: none; }
+        select.search-input, select.form-input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239E9E9E' width='18px' height='18px'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0.75rem center; background-size: 1.25em; padding-right: 2.5rem; }
+        .title-text { font-family: 'Poppins', sans-serif; font-weight: 700; letter-spacing: 0.5px; color: var(--primary); text-shadow: 0 0 8px rgba(255, 143, 0, 0.5); }
+        .action-btn { transition: all 0.2s ease; color: var(--text-muted); border: 1px solid var(--border-color); background-color: transparent; }
+        .action-btn:hover { transform: translateY(-2px) scale(1.05); box-shadow: 0 4px 10px rgba(255, 143, 0, 0.2); color: var(--primary); border-color: var(--primary); }
+        .action-btn.edit:hover { color: var(--primary); border-color: var(--primary); }
+        .action-btn.delete:hover { color: var(--danger-text); border-color: var(--danger-text); }
+
+        .employee-card { background: var(--content-bg); border-radius: 12px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); border: 1px solid var(--border-color); }
+        .employee-card:hover { transform: translateY(-4px); box-shadow: 0 8px 18px rgba(255, 143, 0, 0.2), inset 0 0 6px rgba(0,0,0,0.15); border-color: var(--primary); }
+        .employee-avatar { border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: var(--white-text); display: flex; align-items: center; justify-content: center; font-weight: 600; border: 3px solid var(--primary); }
+        .employee-card .employee-avatar { width: 80px; height: 80px; font-size: 2rem; margin: 0 auto 1rem auto; }
+        #detailAvatar.employee-avatar { width: 96px; height: 96px; font-size: 2.5rem; }
+        .pagination-btn { background-color: var(--content-bg); color: var(--text-primary); transition: all 0.2s ease; border: 1px solid var(--border-color); }
+        .pagination-btn:hover { background-color: var(--primary); color: var(--white-text); border-color: var(--primary); }
+        .pagination-btn.active { background-color: var(--primary); color: var(--white-text); border-color: var(--primary); box-shadow: 0 0 8px rgba(255, 143, 0, 0.3); }
+        .status-active { background-color: var(--success-bg); color: var(--success-text); }
+        .status-inactive { background-color: var(--danger-bg); color: var(--danger-text); }
+        .status-pending { background-color: var(--warning-bg); color: var(--warning-text); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.75); z-index: 1050; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: var(--content-bg); border-radius: 12px; width: 90%; display: flex; flex-direction: column; transform: translateY(20px) scale(0.95); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 1px solid var(--border-color); opacity: 0; }
+        #employeeDetailsModal .modal-content { max-width: 900px; } /* Increased max-width for more details */
+        #addEmployeeModal .modal-content { max-width: 650px; }
+        .modal-overlay.active .modal-content { transform: translateY(0) scale(1); opacity: 1; }
+        .modal-content > .p-6 { max-height: 85vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--primary) var(--dark-bg); }
+        .modal-content > .p-6::-webkit-scrollbar { width: 8px; }
+        .modal-content > .p-6::-webkit-scrollbar-track { background: var(--dark-bg); border-radius: 4px;}
+        .modal-content > .p-6::-webkit-scrollbar-thumb { background-color: var(--primary); border-radius: 4px; }
+        .attendance-present { background-color: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-text); }
+        .attendance-absent { background-color: var(--danger-bg); color: var(--danger-text); border: 1px solid var(--danger-text); }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', sans-serif; color: var(--text-primary); }
+        p, span, label { color: var(--text-secondary); }
+        label { color: var(--text-muted); }
+        .modal-content .text-white, .employee-card .text-white { color: var(--text-primary) !important; }
+        .modal-content .text-gray-400, .employee-card .text-gray-400 { color: var(--text-secondary) !important; }
+        .modal-content .text-orange-400, .employee-card .text-orange-400{ color: var(--primary) !important; }
+        .text-orange-400 { color: var(--primary) !important; }
+        .focus\:ring-orange-500:focus { --tw-ring-opacity: 1; --tw-ring-color: var(--primary) !important; box-shadow: 0 0 0 3px rgba(255, 143, 0, 0.3) !important; }
+        .hover\:bg-orange-500:hover { background-color: var(--primary) !important; }
+        .hover\:bg-orange-600:hover { background-color: var(--primary-dark) !important; }
+        .border-orange-500 { border-color: var(--primary) !important; }
+        .bg-gray-800 { background-color: var(--dark-bg) !important; }
+        .bg-gray-1000 { background-color: var(--content-bg) !important; } 
+        .text-gray-400 { color: var(--text-secondary) !important; } 
+        .text-gray-500 { color: var(--text-muted) !important; }
+        .border-gray-700 { border-color: var(--border-color) !important; }
+        .border-gray-800 { border-color: var(--content-bg) !important; } 
+        .hover\:bg-gray-700:hover { background-color: #2c2c2c !important; }
+        .detail-section-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.75rem 1.5rem; } /* For denser packing */
+        .detail-section-grid p.text-xs { margin-bottom: 0.1rem; } /* Tighter spacing */
+        .detail-section-grid p.text-white { word-break: break-word; }
+        .document-link { color: var(--primary) !important; text-decoration: underline; }
+        .document-link:hover { color: var(--primary-dark) !important; }
+
+        
+        /* Improved styles for education and experience sections */
+        /* .detail-entry-container {
+            background-color: var(--dark-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+        
+        .detail-entry-container:hover {
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(255, 143, 0, 0.2);
+        }
+        
+        .detail-entry-header {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .detail-entry-subheader {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .detail-entry-content {
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .detail-entry-meta {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-top: 0.5rem;
+        }
+        
+        .detail-entry-divider {
+            border-top: 1px solid var(--border-color);
+            margin: 0.5rem 0;
+        }
+         */
+        /* Improved long text handling */
+        .long-text-container {
+            max-height: 60px;
+            overflow: hidden;
+            position: relative;
+            transition: max-height 0.3s ease;
+            margin-top: 0.5rem;
+        }
+        
+        .long-text-container.expanded {
+            max-height: none;
+        }
+        
+        .long-text-container .text-content {
+            margin-bottom: 0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .view-more-btn {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(to left, rgba(30, 30, 30, 0.9), transparent);
+            padding-left: 30px;
+            padding-right: 5px;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 0.75rem;
+            display: none;
+            z-index: 1;
+        }
+        
+        .long-text-container:not(.expanded) .view-more-btn {
+            display: block;
+        }
+        
+        /* Consistent section styling */
+        .details-section {
+            border-top: 1px solid var(--border-color);
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .details-section-title {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .details-section-title i {
+            margin-right: 0.5rem;
+        }
+
+        /* Sensitive data styling */
+        /* .sensitive-data {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0.5px;
+            background-color: rgba(255, 143, 0, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+            border-left: 3px solid var(--primary);
+        } */
+
+        /* Responsive adjustments for the details modal */
+        @media (max-width: 768px) {
+            #employeeDetailsModal .modal-content {
+                width: 95%;
+                max-width: 95%;
+            }
+            
+            .flex-col.md\:flex-row {
+                flex-direction: column;
+            }
+            
+            .detail-section-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+</head>
+<body>
+<button class="sidebar-toggle-button" onclick="toggleSidebar()">
+    <i class="fa-solid fa-bars"></i>
+</button>
+<div class="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="sidebar">
+    <div>
+        <img src="/images/xammer_logo.png" alt="Xammer HRMS Logo"> <div class="nav-links">
+            <a href="/admin/dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+            <a href="/admin/employees" class="active"><i class="fa-solid fa-users"></i> Employees</a>
+            <a href="/admin/attendance"><i class="fa-solid fa-calendar-check"></i> Attendance</a>
+            <a href="/admin/requests/pending"><i class="fa fa-calendar-alt"></i> Team Requests</a> </div>
+    </div>
+    <div class="logout" onclick="confirmLogout()">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </div>
+</div>
+
+<div class="flex-1 flex flex-col overflow-hidden h-full ml-0 transition-all duration-300 ease-in-out" id="actualMainContent">
+    <div class="page-header">
+        <div class="page-header-flank page-header-flank-left">
+            </div>
+        <div class="page-header-main-title">
+            <i class="fas fa-users-cog page-header-icon"></i>
+            <h1 th:text="${'Employee Management'}">Employee Management</h1>
+        </div>
+        <div class="page-header-flank page-header-flank-right">
+            <div class="page-header-right-content">
+                </div>
+        </div>
+    </div>
+
+    <div class="main-content-wrapper flex-1 overflow-y-auto">
+        <div class="filter-container mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="md:col-span-2">
+                    <label for="employeeSearch" class="block text-sm font-medium mb-1 tracking-wide">SEARCH EMPLOYEES</label>
+                    <div class="relative">
+                        <input type="text" id="employeeSearch" placeholder="Search by name, username, email or ID..."
+                               class="search-input w-full">
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <i class="bi bi-search"></i>
+                        </div>
+                    </div>
+                    <ul id="employeeSearchResults" class="search-results absolute z-20 mt-1 w-full hidden"></ul>
+                </div>
+                <div>
+                    <label for="filterDepartment" class="block text-sm font-medium mb-1 tracking-wide">DEPARTMENT</label>
+                    <select id="filterDepartment" class="search-input w-full">
+                        <option value="">All Departments</option>
+                        <option value="DevOps">DevOps</option>
+                        <option value="Business">Business</option>
+                        <option value="Marketing">Marketing</option>
+                        </select>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="filterEmployees()" class="btn-primary w-full py-3 px-4 flex items-center justify-center font-medium tracking-wide">
+                        <i class="bi bi-funnel-fill mr-2"></i> FILTER
+                    </button>
+                    <button onclick="openAddEmployeeModal()" class="btn-primary w-full py-3 px-4 flex items-center justify-center font-medium tracking-wide">
+                        <i class="bi bi-plus-circle mr-2"></i> ADD
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-6" id="employeeCardsContainer">
+            </div>
+
+        <div class="flex justify-center mt-8 mb-4">
+            <nav class="inline-flex rounded-md shadow-lg" id="paginationContainer">
+                </nav>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="addEmployeeModal">
+    <div class="modal-content">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold title-text" id="addEmployeeModalTitle">Add New Employee</h3>
+                <button onclick="closeAddEmployeeModal()" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="bi bi-x-lg text-xl"></i>
+                </button>
+            </div>
+            <form id="addEmployeeForm" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="firstName" class="block text-sm font-medium mb-1">First Name</label><input type="text" id="firstName" class="form-input w-full" required></div>
+                    <div><label for="lastName" class="block text-sm font-medium mb-1">Last Name</label><input type="text" id="lastName" class="form-input w-full" required></div>
+                </div>
+                <div><label for="email" class="block text-sm font-medium mb-1">Email</label><input type="email" id="email" class="form-input w-full" required></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="department" class="block text-sm font-medium mb-1">Department</label>
+                        <select id="department" class="form-input w-full">
+                            <option value="">Select Department</option>
+                            <option value="DevOps">DevOps</option>
+                            <option value="Business">Business</option>
+                            <option value="Marketing">Marketing</option>
+                        </select>
+                    </div>
+                    <div><label for="position" class="block text-sm font-medium mb-1">Job Title</label><input type="text" id="position" class="form-input w-full"></div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="joinDate" class="block text-sm font-medium mb-1">Join Date</label><input type="date" id="joinDate" class="form-input w-full"></div>
+                    <div><label for="phone" class="block text-sm font-medium mb-1">Phone</label><input type="tel" id="phone" class="form-input w-full"></div>
+                </div>
+                <div id="passwordFieldContainer"> 
+                    <label for="password" class="block text-sm font-medium text-gray-400 mb-1">Password</label>
+                    <input type="password" id="password" name="password" class="form-input w-full" placeholder="Enter password" autocomplete="new-password">
+                </div>
+                <div>
+                    <label for="roles" class="block text-sm font-medium mb-1">Role</label>
+                    <select id="roles" class="form-input w-full" required>
+                        <option value="">Select Role</option>
+                        <option value="ROLE_USER">USER</option>
+                        <option value="ROLE_USER_MANAGER">MANAGER</option>
+                        <option value="ROLE_ADMIN">ADMIN</option>
+                    </select>
+                </div>
+                <div class="pt-6 flex justify-end space-x-3">
+                    <button type="button" onclick="closeAddEmployeeModal()" class="px-4 py-2 rounded-lg border border-gray-700 text-gray-300 hover:bg-gray-700 transition-colors">Cancel</button>
+                    <button type="submit" class="btn-primary px-6 py-2" id="addEmployeeSubmitButton">Add Employee</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Details Modal -->
+<div class="modal-overlay" id="employeeDetailsModal">
+    <div class="modal-content">
+        <div class="p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-semibold title-text">Employee Details</h3>
+                <button onclick="closeEmployeeDetailsModal()" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="bi bi-x-lg text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Basic Info Section -->
+            <div class="flex flex-col md:flex-row gap-6 mb-6">
+                <div class="flex flex-col items-center md:items-start md:w-1/3">
+                    <div id="detailAvatar" class="employee-avatar mb-4">JD</div>
+                    <span class="text-xs px-2 py-1 rounded-full status-active mb-3" id="detailStatus">Active</span>
+                    <div class="flex space-x-2">
+                        <button class="action-btn edit py-1 px-3 rounded text-sm flex items-center" onclick="editEmployeeDetails()"><i class="bi bi-pencil-square mr-1"></i> Edit</button>
+                        <button class="action-btn delete py-1 px-3 rounded text-sm flex items-center" onclick="deleteEmployee()"><i class="bi bi-trash mr-1"></i> Delete</button>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-2xl font-semibold text-white mb-1" id="detailName">John Doe</h4>
+                    <p class="text-gray-400 text-sm mb-1" id="detailUsername"></p>
+                    <p class="text-gray-400 text-sm mb-4" id="detailJobTitle"></p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                        <div><p class="text-xs text-gray-500">Employee ID</p><p class="text-white" id="detailEmployeeId"></p></div>
+                        <div><p class="text-xs text-gray-500">Email</p><p class="text-white" id="detailEmail"></p></div>
+                        <div><p class="text-xs text-gray-500">Phone</p><p class="text-white" id="detailPhone"></p></div>
+                        <div><p class="text-xs text-gray-500">Department</p><p class="text-white" id="detailDepartment"></p></div>
+                        <div><p class="text-xs text-gray-500">Join Date</p><p class="text-white" id="detailJoinDate"></p></div>
+                        <!-- <div><p class="text-xs text-gray-500">Work Location</p><p class="text-white" id="detailWorkLocation"></p></div> -->
+                        <!-- <div><p class="text-xs text-gray-500">Employment Type</p><p class="text-white" id="detailEmploymentType"></p></div> -->
+                        <!-- <div><p class="text-xs text-gray-500">Manager</p><p class="text-white" id="detailManagerName"></p></div> -->
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Personal Information Section -->
+            <div class="details-section">
+                <h5 class="details-section-title"><i class="bi bi-person-vcard"></i> Personal Information</h5>
+                <div class="detail-section-grid text-sm">
+                    <div><p class="text-xs text-gray-500">Date of Birth</p><p class="text-white" id="detailBirthDate"></p></div>
+                    <div><p class="text-xs text-gray-500">Gender</p><p class="text-white" id="detailGender"></p></div>
+                    <div><p class="text-xs text-gray-500">Nationality</p><p class="text-white" id="detailNationality"></p></div>
+                    <div><p class="text-xs text-gray-500">Blood Group</p><p class="text-white" id="detailBloodGroup"></p></div>
+                    <div class="md:col-span-2"><p class="text-xs text-gray-500">Address</p><p class="text-white" id="detailAddress" style="white-space: pre-wrap;"></p></div>
+                </div>
+            </div>
+
+            <!-- Family Information Section -->
+            <div class="details-section">
+                <h5 class="details-section-title"><i class="bi bi-people"></i> Family Information</h5>
+                <div class="detail-section-grid text-sm">
+                    <div><p class="text-xs text-gray-500">Father's Name</p><p class="text-white" id="detailFatherName"></p></div>
+                    <div><p class="text-xs text-gray-500">Mother's Name</p><p class="text-white" id="detailMotherName"></p></div>
+                    <div><p class="text-xs text-gray-500">Marital Status</p><p class="text-white" id="detailMaritalStatus"></p></div>
+                    <div><p class="text-xs text-gray-500">Children</p><p class="text-white" id="detailChildrenCount"></p></div>
+                </div>
+                <div id="spouseSectionModal" style="display:none;" class="mt-2 detail-section-grid text-sm">
+                     <div><p class="text-xs text-gray-500">Spouse's Name</p><p class="text-white" id="detailSpouseName"></p></div>
+                     <div><p class="text-xs text-gray-500">Spouse's DOB</p><p class="text-white" id="detailSpouseDob"></p></div>
+                </div>
+            </div>
+            
+            <!-- Education Section -->
+            <div class="details-section">
+                <h5 class="details-section-title"><i class="bi bi-mortarboard"></i> Education</h5>
+                <div id="detailEducationEntries" class="space-y-3 text-sm">
+                    <!-- Education entries will be populated here by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Professional Experience Section -->
+            <div class="details-section">
+                <h5 class="details-section-title"><i class="bi bi-briefcase"></i> Professional Experience</h5>
+                <div id="detailExperienceEntries" class="space-y-3 text-sm">
+                    <!-- Experience entries will be populated here by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Financial & Legal Details Section -->
+            <div class="details-section">
+                <h5 class="details-section-title"><i class="bi bi-bank"></i> Financial & Legal</h5>
+                <div class="detail-section-grid text-sm">
+                    <div><p class="text-xs text-gray-500">Bank Name</p><p class="text-white" id="detailBankName"></p></div>
+                    <div><p class="text-xs text-gray-500">Account No.</p><p class="text-white sensitive-data" id="detailAccountNumber"></p></div>
+                    <div><p class="text-xs text-gray-500">IFSC Code</p><p class="text-white" id="detailIfsc"></p></div>
+                    <div><p class="text-xs text-gray-500">Aadhaar No.</p><p class="text-white sensitive-data" id="detailAadhaarNo"></p></div>
+                    <div><p class="text-xs text-gray-500">PAN No.</p><p class="text-white sensitive-data" id="detailPanNo"></p></div>
+                    <div><p class="text-xs text-gray-500">Aadhaar Document</p><p class="text-white" id="detailAadhaarDoc"></p></div>
+                    <div><p class="text-xs text-gray-500">PAN Document</p><p class="text-white" id="detailPanDoc"></p></div>
+                </div>
+            </div>
+            
+            <!-- Attendance Summary -->
+            <!-- <div class="details-section">
+                <h5 class="details-section-title"><i class="bi bi-calendar-check"></i> Attendance Summary</h5>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-gray-800 p-4 rounded-lg text-center"><p class="text-gray-400 text-sm mb-1">Total Days</p><p class="text-white text-2xl font-semibold" id="totalDays">0</p></div>
+                    <div class="p-4 rounded-lg attendance-present text-center"><p class="text-sm mb-1 opacity-80">Present</p><p class="text-white text-2xl font-semibold" id="presentDays">0</p></div>
+                    <div class="p-4 rounded-lg attendance-absent text-center"><p class="text-sm mb-1 opacity-80">Absent</p><p class="text-white text-2xl font-semibold" id="absentDays">0</p></div>
+                </div>
+            </div> -->
+
+            <div class="pt-8 flex justify-end">
+                <button onclick="closeEmployeeDetailsModal()" class="btn-primary px-6 py-2">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const csrfTokenEl = document.querySelector('meta[name="_csrf"]');
+    const csrfHeaderEl = document.querySelector('meta[name="_csrf_header"]');
+
+    const csrfToken = csrfTokenEl ? csrfTokenEl.getAttribute('content') : null;
+    const csrfHeaderName = csrfHeaderEl ? csrfHeaderEl.getAttribute('content') : null;
+
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
+    const actualMainContent = document.getElementById('actualMainContent'); 
+
+    let currentPage = 1;
+    const ITEMS_PER_PAGE = 8;
+    let totalPages = 1;
+    let allEmployees = []; 
+    let filteredEmployees = []; 
+    
+    // Education levels mapping
+    const educationLevelsMap = { 
+        "HIGH_SCHOOL": "High School / Secondary", 
+        "DIPLOMA": "Diploma", 
+        "ASSOCIATE": "Associate Degree", 
+        "BACHELOR": "Bachelor's Degree", 
+        "MASTER": "Master's Degree", 
+        "DOCTORATE": "Doctorate (Ph.D.)", 
+        "POST_DOCTORATE": "Post-Doctorate", 
+        "CERTIFICATION": "Professional Certification" 
+    };
+
+    function formatDateForDisplay(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'N/A';
+            return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch (e) {
+            console.error("Error formatting date for admin page display:", dateString, e);
+            return 'N/A';
+        }
+    }
+
+    function updateCurrentTime() {
+        const now = new Date();
+        const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const dateString = now.toLocaleDateString('en-US', dateOptions);
+        const timeString = now.toLocaleTimeString('en-US', timeOptions);
+        const dateTimeElement = document.querySelector('.page-header-right-content');
+        if (dateTimeElement) {
+            dateTimeElement.textContent = `${dateString} • ${timeString}`;
+        }
+    }
+
+    function toggleSidebar() {
+        const isOpen = sidebar.classList.toggle('open');
+        sidebarOverlay.style.display = isOpen ? 'block' : 'none';
+        actualMainContent.classList.toggle('ml-64', isOpen); 
+        actualMainContent.classList.toggle('ml-0', !isOpen);
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        sidebarOverlay.style.display = 'none';
+        actualMainContent.classList.remove('ml-64');
+        actualMainContent.classList.add('ml-0');
+    }
+
+    function confirmLogout() {
+        if (typeof Swal === 'undefined') {
+            alert('Logout functionality requires SweetAlert2.');
+            return;
+        }
+        Swal.fire({
+            title: 'Are you sure?', text: "You will be logged out.", icon: 'warning', showCancelButton: true,
+            confirmButtonColor: 'var(--primary)', cancelButtonColor: '#757575', confirmButtonText: 'Yes, logout!',
+            background: 'var(--content-bg)', color: 'var(--text-primary)', customClass: { popup: 'rounded-xl' }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST'; form.action = '/logout'; 
+                if (csrfToken && csrfHeaderName) { 
+                    const csrfInput = Object.assign(document.createElement('input'), { type: 'hidden', name: '_csrf', value: csrfToken });
+                    form.appendChild(csrfInput);
+                }
+                document.body.appendChild(form); form.submit();
+            }
+        });
+    }
+
+    function fetchEmployees() {
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken && csrfHeaderName) {
+             headers[csrfHeaderName] = csrfToken;
+        }
+
+        fetch('/admin/employees/api', { 
+            method: 'GET',
+            headers: headers
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) {
+                    Swal.fire({ title: 'Authentication Error!', text: 'Please log in again.', icon: 'error', background: 'var(--content-bg)', color: 'var(--text-primary)', confirmButtonColor: 'var(--primary)'})
+                        .then(() => window.location.href = '/login'); 
+                } else {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+            }
+            return response.json();
+        })
+        .then(data => {
+            allEmployees = data.map(user => ({
+                ...user,
+                internalId: user.id,
+                presentDays: user.presentDays || 0,
+                absentDays: user.absentDays || 0,
+                totalDays: (user.presentDays || 0) + (user.absentDays || 0)
+            }));
+            applyFiltersAndRender();
+        })
+        .catch(error => {
+            console.error('Error fetching employees:', error);
+            Swal.fire({ title: 'Error!', text: 'Failed to load employee data.', icon: 'error', background: 'var(--content-bg)', color: 'var(--text-primary)', confirmButtonColor: 'var(--primary)'});
+        });
+    }
+
+    function renderEmployeeCards() {
+        const container = document.getElementById('employeeCardsContainer');
+        container.innerHTML = '';
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        const employeesToRender = filteredEmployees.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+        if (employeesToRender.length === 0 && filteredEmployees.length === 0 && document.getElementById('employeeSearch').value === '' && document.getElementById('filterDepartment').value === '') {
+           // Initial load, no message yet or handle as "Loading..."
+        } else if (employeesToRender.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 text-lg py-10 col-span-full">No employees match your current filters.</p>';
+        }
+
+        employeesToRender.forEach(employee => {
+            const card = document.createElement('div');
+            card.className = 'employee-card p-5 cursor-pointer flex flex-col';
+            card.onclick = () => viewEmployeeDetails(employee.internalId); 
+            const initials = (employee.firstName ? employee.firstName.charAt(0) : '') + (employee.lastName ? employee.lastName.charAt(0) : '');
+            const joiningDate = employee.joiningDate ? formatDateForDisplay(employee.joiningDate) : 'N/A';
+
+            card.innerHTML = `
+                <div class="employee-avatar mb-4">${initials.toUpperCase()}</div>
+                <h3 class="text-xl font-semibold text-white text-center mb-1">${employee.firstName || ''} ${employee.lastName || ''}</h3>
+                <p class="text-gray-400 text-sm text-center mb-0.5">${employee.username || 'N/A'}</p>
+                <p class="text-gray-400 text-sm text-center mb-3">${employee.jobTitle || 'N/A'}</p>
+                <div class="flex justify-between items-center text-sm mb-3">
+                    <span class="text-gray-400">ID: ${employee.id || 'N/A'}</span>
+                    <span class="text-xs px-2 py-1 rounded-full status-active">Active</span> </div>
+                <div class="flex justify-between text-sm mb-auto">
+                    <span class="text-gray-400">${employee.department || 'N/A'}</span>
+                    <span class="text-orange-400">Joined: ${joiningDate}</span>
+                </div>
+                <div class="mt-4 flex justify-between text-xs">
+                    <span class="px-2 py-1 rounded attendance-present">Present: ${employee.presentDays}</span>
+                    <span class="px-2 py-1 rounded attendance-absent">Absent: ${employee.absentDays}</span>
+                </div>`;
+            container.appendChild(card);
+        });
+        updatePagination();
+    }
+    
+    function applyFiltersAndRender() {
+        const searchText = document.getElementById('employeeSearch').value.toLowerCase().trim();
+        const department = document.getElementById('filterDepartment').value;
+
+        filteredEmployees = allEmployees.filter(emp => {
+            const matchesSearch = searchText === '' ||
+                `${emp.firstName || ''} ${emp.lastName || ''}`.toLowerCase().includes(searchText) ||
+                (emp.username && emp.username.toLowerCase().includes(searchText)) ||
+                (emp.email && emp.email.toLowerCase().includes(searchText)) ||
+                (emp.id && emp.id.toString().toLowerCase().includes(searchText));
+            const matchesDepartment = department === '' || emp.department === department;
+            return matchesSearch && matchesDepartment;
+        });
+        currentPage = 1;
+        renderEmployeeCards();
+    }
+
+    document.getElementById('employeeSearch').addEventListener('input', function(e) {
+        const searchText = e.target.value.trim().toLowerCase();
+        const resultsList = document.getElementById('employeeSearchResults');
+
+        if (searchText.length > 0) {
+            const searchResults = allEmployees.filter(emp =>
+                `${emp.firstName || ''} ${emp.lastName || ''}`.toLowerCase().includes(searchText) ||
+                (emp.username && emp.username.toLowerCase().includes(searchText)) ||
+                (emp.email && emp.email.toLowerCase().includes(searchText)) ||
+                (emp.id && emp.id.toString().toLowerCase().includes(searchText))
+            ).slice(0, 5);
+
+            resultsList.innerHTML = '';
+            if (searchResults.length > 0) {
+                searchResults.forEach(employee => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="text-white">${employee.firstName || ''} ${employee.lastName || ''}</span> <span class="text-xs text-gray-400">(${employee.username || employee.id || 'N/A'})</span>`;
+                    li.onclick = () => {
+                        document.getElementById('employeeSearch').value = `${employee.firstName || ''} ${employee.lastName || ''}`;
+                        resultsList.style.display = 'none';
+                        viewEmployeeDetails(employee.internalId); 
+                    };
+                    resultsList.appendChild(li);
+                });
+                resultsList.style.display = 'block';
+            } else {
+                resultsList.innerHTML = '<li>No matching employees found</li>';
+                resultsList.style.display = 'block';
+            }
+        } else {
+            resultsList.style.display = 'none';
+            resultsList.innerHTML = '';
+            applyFiltersAndRender(); 
+        }
+    });
+    
+    document.addEventListener('click', function(event) {
+        const searchInput = document.getElementById('employeeSearch');
+        const searchResults = document.getElementById('employeeSearchResults');
+        if (searchInput && searchResults && !searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+            searchResults.style.display = 'none';
+        }
+    });
+
+    function filterEmployees() { 
+        applyFiltersAndRender();
+        const searchResults = document.getElementById('employeeSearchResults');
+        if(searchResults) searchResults.style.display = 'none';
+    }
+
+    function changePage(newPage) {
+        if (newPage >= 1 && newPage <= totalPages) {
+            currentPage = newPage;
+            renderEmployeeCards();
+        }
+    }
+
+    function updatePagination() {
+        totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
+        if (totalPages < 1) totalPages = 1; 
+
+        const container = document.getElementById('paginationContainer');
+        container.innerHTML = '';
+
+        if (filteredEmployees.length === 0 && document.getElementById('employeeSearch').value === '' && document.getElementById('filterDepartment').value === '') {
+             // Do not render pagination if no employees and no filters active (initial state)
+        }
+
+        const prevBtn = Object.assign(document.createElement('button'), {
+            className: 'pagination-btn px-3 py-2 rounded-l-md text-sm',
+            innerHTML: '<i class="bi bi-chevron-left"></i>',
+            disabled: currentPage === 1
+        });
+        prevBtn.onclick = () => changePage(currentPage - 1);
+        container.appendChild(prevBtn);
+
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+
+        if (totalPages <= 5) { startPage = 1; endPage = totalPages; }
+        else if (currentPage <= 3) { startPage = 1; endPage = 5; }
+        else if (currentPage >= totalPages - 2) { startPage = totalPages - 4; endPage = totalPages; }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = Object.assign(document.createElement('button'), {
+                className: `pagination-btn px-4 py-2 border-l text-sm ${i === currentPage ? 'active' : ''}`,
+                textContent: i
+            });
+            pageBtn.onclick = () => changePage(i);
+            container.appendChild(pageBtn);
+        }
+
+        const nextBtn = Object.assign(document.createElement('button'), {
+            className: 'pagination-btn px-3 py-2 border-l rounded-r-md text-sm',
+            innerHTML: '<i class="bi bi-chevron-right"></i>',
+            disabled: currentPage === totalPages || filteredEmployees.length === 0
+        });
+        nextBtn.onclick = () => changePage(currentPage + 1);
+        container.appendChild(nextBtn);
+    }
+
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+
+    function openAddEmployeeModal() {
+        const form = document.getElementById('addEmployeeForm');
+        form.reset();
+        form.removeAttribute('data-employee-id'); 
+        form.removeAttribute('data-internal-id');
+        if (form.originalData) {
+            delete form.originalData;
+        }
+
+        document.getElementById('addEmployeeModalTitle').textContent = 'Add New Employee';
+        document.getElementById('addEmployeeSubmitButton').textContent = 'Add Employee';
+        
+        document.getElementById('passwordFieldContainer').style.display = 'block'; 
+        const passwordInput = document.getElementById('password');
+        passwordInput.placeholder = "Enter password";
+        passwordInput.disabled = false;
+        passwordInput.required = true; 
+
+        openModal('addEmployeeModal');
+    }
+
+    function closeAddEmployeeModal() {
+        const form = document.getElementById('addEmployeeForm');
+        if (form.originalData) {
+            delete form.originalData;
+        }
+        closeModal('addEmployeeModal');
+    }
+        function viewEmployeeDetails(employeeInternalId) {
+        const emp = allEmployees.find(e => e.internalId === employeeInternalId);
+        if (!emp) {
+            console.error("Employee not found for details view:", employeeInternalId);
+            Swal.fire('Error', 'Employee details not found.', 'error');
+            return;
+        }
+        openModal('employeeDetailsModal');
+
+        // Basic Info
+        document.getElementById('detailAvatar').textContent = ((emp.firstName ? emp.firstName.charAt(0) : '') + (emp.lastName ? emp.lastName.charAt(0) : '')).toUpperCase();
+        document.getElementById('detailName').textContent = `${emp.firstName || ''} ${emp.lastName || ''}`;
+        document.getElementById('detailUsername').textContent = emp.username ? `Username: ${emp.username}` : 'No Username';
+        document.getElementById('detailJobTitle').textContent = `${emp.jobTitle || 'N/A'} | ID: ${emp.id || 'N/A'}`;
+        document.getElementById('detailEmployeeId').textContent = emp.id || 'N/A';
+        document.getElementById('detailEmail').textContent = emp.email || 'N/A';
+        document.getElementById('detailPhone').textContent = emp.phone || 'N/A';
+        document.getElementById('detailDepartment').textContent = emp.department || 'N/A';
+        document.getElementById('detailJoinDate').textContent = emp.joiningDate ? formatDateForDisplay(emp.joiningDate) : 'N/A';
+        // document.getElementById('detailWorkLocation').textContent = emp.workLocation || 'N/A';
+        // document.getElementById('detailEmploymentType').textContent = emp.employmentType || 'N/A';
+        // document.getElementById('detailManagerName').textContent = emp.managerFullName || 'N/A';
+
+        // Personal Info
+        document.getElementById('detailBirthDate').textContent = emp.birthDate ? formatDateForDisplay(emp.birthDate) : 'N/A';
+        document.getElementById('detailGender').textContent = emp.gender || 'N/A';
+        document.getElementById('detailNationality').textContent = emp.nationality || 'N/A';
+        document.getElementById('detailBloodGroup').textContent = emp.bloodGroup || 'N/A';
+        document.getElementById('detailAddress').textContent = emp.address || 'N/A';
+
+        // Family Info
+        document.getElementById('detailFatherName').textContent = emp.fatherName || 'N/A';
+        document.getElementById('detailMotherName').textContent = emp.motherName || 'N/A';
+        document.getElementById('detailMaritalStatus').textContent = emp.maritalStatus || 'N/A';
+        document.getElementById('detailChildrenCount').textContent = (emp.childrenCount !== null && emp.childrenCount !== undefined) ? emp.childrenCount : 'N/A';
+        
+        const spouseSectionModal = document.getElementById('spouseSectionModal');
+        if (emp.maritalStatus === 'Married') {
+            spouseSectionModal.style.display = 'grid';
+            document.getElementById('detailSpouseName').textContent = emp.spouseName || 'N/A';
+            document.getElementById('detailSpouseDob').textContent = emp.spouseDob ? formatDateForDisplay(emp.spouseDob) : 'N/A';
+        } else {
+            spouseSectionModal.style.display = 'none';
+        }
+
+        // Education Entries
+        const eduContainer = document.getElementById('detailEducationEntries');
+        eduContainer.innerHTML = '';
+        if (emp.educations && emp.educations.length > 0) {
+            emp.educations.forEach(edu => {
+                const eduDiv = document.createElement('div');
+                eduDiv.className = 'detail-entry-container';
+                
+                let certLink = edu.certOriginalFilename || 'No document';
+                if (edu.certUrl && edu.certOriginalFilename) {
+                    certLink = `<a href="${edu.certUrl}" target="_blank" class="document-link">${edu.certOriginalFilename}</a>`;
+                } else if (edu.certUrl) { 
+                     certLink = `<a href="${edu.certUrl}" target="_blank" class="document-link">View Document</a>`;
+                }
+                
+                eduDiv.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                        <div><p class="text-xs text-gray-500">Degree Level</p><p class="text-white">${educationLevelsMap[edu.level] || edu.level || 'N/A'}</p></div>
+                        <div><p class="text-xs text-gray-500">Degree</p><p class="text-white">${edu.degree || 'N/A'}</p></div>
+                        <div><p class="text-xs text-gray-500">Institution</p><p class="text-white">${edu.institute || 'N/A'}</p></div>
+                        <div><p class="text-xs text-gray-500">Field of Study</p><p class="text-white">${edu.fieldOfStudy || 'N/A'}</p></div>
+                        <div><p class="text-xs text-gray-500">Year</p><p class="text-white">${edu.year || 'N/A'}</p></div>
+                        <div><p class="text-xs text-gray-500">Score</p><p class="text-white">${edu.score || 'N/A'}</p></div>
+                        <div class="md:col-span-2"><p class="text-xs text-gray-500">Certificate</p><p class="text-white">${certLink}</p></div>
+                    </div>
+                `;
+                eduContainer.appendChild(eduDiv);
+            });
+        } else {
+            eduContainer.innerHTML = '<div class="detail-entry-container"><p class="text-white">No education details available.</p></div>';
+        }
+
+        // Professional Experience Entries
+        const expContainer = document.getElementById('detailExperienceEntries');
+        expContainer.innerHTML = '';
+        if (emp.professionalExperiences && emp.professionalExperiences.length > 0) {
+            emp.professionalExperiences.forEach(exp => {
+                const expDiv = document.createElement('div');
+                expDiv.className = 'detail-entry-container';
+                
+                let letterLink = exp.experienceLetterOriginalFilename || 'No document';
+                if (exp.experienceLetterUrl && exp.experienceLetterOriginalFilename) {
+                    letterLink = `<a href="${exp.experienceLetterUrl}" target="_blank" class="document-link">${exp.experienceLetterOriginalFilename}</a>`;
+                } else if (exp.experienceLetterUrl) {
+                     letterLink = `<a href="${exp.experienceLetterUrl}" target="_blank" class="document-link">View Letter</a>`;
+                }
+
+                expDiv.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                        <div><p class="text-xs text-gray-500">Job Title</p><p class="text-white">${exp.jobTitle || 'N/A'}</p></div>
+                        <div><p class="text-xs text-gray-500">Company</p><p class="text-white">${exp.companyName || 'N/A'}</p></div>
+                        <div><p class="text-xs text-gray-500">Start Date</p><p class="text-white">${exp.startDate ? formatDateForDisplay(exp.startDate) : 'N/A'}</p></div>
+                        <div><p class="text-xs text-gray-500">End Date</p><p class="text-white">${exp.endDate ? formatDateForDisplay(exp.endDate) : 'Present'}</p></div>
+                        <div class="md:col-span-2">
+                            <p class="text-xs text-gray-500">Description</p>
+                            <div class="long-text-container">
+                                <p class="text-white text-content">${exp.description || 'N/A'}</p>
+                                <span class="view-more-btn">View More</span>
+                            </div>
+                        </div>
+                        <div class="md:col-span-2"><p class="text-xs text-gray-500">Experience Letter</p><p class="text-white">${letterLink}</p></div>
+                    </div>
+                `;
+                expContainer.appendChild(expDiv);
+            });
+        } else {
+            expContainer.innerHTML = '<div class="detail-entry-container"><p class="text-white">No professional experience available.</p></div>';
+        }
+        
+        // Financial & Legal
+        document.getElementById('detailBankName').textContent = emp.bankName || 'N/A';
+        document.getElementById('detailAccountNumber').textContent = emp.accountNumber || 'N/A'; // Show full account number
+        document.getElementById('detailIfsc').textContent = emp.ifsc || 'N/A';
+        document.getElementById('detailAadhaarNo').textContent = emp.aadhaar || 'N/A'; // Show full Aadhaar number
+        document.getElementById('detailPanNo').textContent = emp.pan || 'N/A'; 
+        
+        const aadhaarDocP = document.getElementById('detailAadhaarDoc');
+        if (emp.aadhaarDocUrl) {
+            aadhaarDocP.innerHTML = `<a href="${emp.aadhaarDocUrl}" target="_blank" class="document-link">${emp.aadhaarDocOriginalFilename || 'View Aadhaar'}</a>`;
+        } else {
+            aadhaarDocP.textContent = emp.aadhaarDocOriginalFilename || 'N/A';
+        }
+
+        const panDocP = document.getElementById('detailPanDoc');
+        if (emp.panDocUrl) {
+            panDocP.innerHTML = `<a href="${emp.panDocUrl}" target="_blank" class="document-link">${emp.panDocOriginalFilename || 'View PAN'}</a>`;
+        } else {
+            panDocP.textContent = emp.panDocOriginalFilename || 'N/A';
+        }
+
+        // Attendance Summary
+        // document.getElementById('totalDays').textContent = emp.totalDays || 0;
+        // document.getElementById('presentDays').textContent = emp.presentDays || 0;
+        // document.getElementById('absentDays').textContent = emp.absentDays || 0;
+
+        const detailsModal = document.getElementById('employeeDetailsModal');
+        detailsModal.setAttribute('data-employee-id', emp.id); 
+        detailsModal.setAttribute('data-internal-id', emp.internalId); 
+
+        // Initialize view more buttons after content is loaded
+        setTimeout(initializeViewMoreButtons, 100);
+    }
+
+    function initializeViewMoreButtons() {
+        document.querySelectorAll('.long-text-container').forEach(container => {
+            const content = container.querySelector('.text-content');
+            const btn = container.querySelector('.view-more-btn');
+            
+            // Only show button if content is long enough to need truncation
+            if (content.scrollHeight > 60) { // 60px is our initial max-height
+                container.style.maxHeight = '60px';
+                btn.style.display = 'block';
+            } else {
+                btn.style.display = 'none';
+            }
+        });
+    }
+
+    // Handle view more/less button clicks
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('view-more-btn')) {
+            e.preventDefault();
+            e.stopPropagation();
+            const container = e.target.closest('.long-text-container');
+            container.classList.toggle('expanded');
+            e.target.textContent = container.classList.contains('expanded') ? 'View Less' : 'View More';
+        }
+    });
+
+    function closeEmployeeDetailsModal() {
+        closeModal('employeeDetailsModal');
+    }
+
+    function editEmployeeDetails() {
+        const internalIdString = document.getElementById('employeeDetailsModal').getAttribute('data-internal-id');
+        if (!internalIdString) { Swal.fire('Error', 'Cannot find employee ID to edit.', 'error'); return; }
+        const internalId = parseInt(internalIdString);
+        const emp = allEmployees.find(e => e.internalId === internalId); 
+        if (!emp) { Swal.fire('Error', 'Cannot find employee data to edit.', 'error'); return; }
+
+        closeEmployeeDetailsModal(); 
+        openAddEmployeeModal(); 
+
+        document.getElementById('addEmployeeModalTitle').textContent = 'Edit Employee';
+        document.getElementById('addEmployeeSubmitButton').textContent = 'Update Employee';
+        const form = document.getElementById('addEmployeeForm');
+        form.setAttribute('data-employee-id', emp.id); 
+        form.setAttribute('data-internal-id', emp.internalId); 
+        
+        document.getElementById('firstName').value = emp.firstName || '';
+        document.getElementById('lastName').value = emp.lastName || '';
+        document.getElementById('email').value = emp.email || '';
+        document.getElementById('department').value = emp.department || '';
+        document.getElementById('position').value = emp.jobTitle || ''; 
+        document.getElementById('joinDate').value = emp.joiningDate ? emp.joiningDate.split('T')[0] : '';
+        document.getElementById('phone').value = emp.phone || '';
+        document.getElementById('roles').value = emp.roles || ''; 
+
+        document.getElementById('passwordFieldContainer').style.display = 'none';
+        const passwordInput = document.getElementById('password');
+        passwordInput.required = false; 
+        passwordInput.value = ''; 
+    }
+
+    document.getElementById('addEmployeeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const form = e.target;
+        const submitButton = document.getElementById('addEmployeeSubmitButton');
+        const isEdit = form.hasAttribute('data-internal-id') && form.getAttribute('data-internal-id');
+        const employeeIdForApiUrl = isEdit ? form.getAttribute('data-employee-id') : null; 
+
+        const passwordValue = document.getElementById('password').value;
+        const firstNameValue = document.getElementById('firstName').value; 
+        let userToSave = {};
+        let method = 'POST';
+        let apiUrl = '/admin/employees/api';
+
+        submitButton.disabled = true;
+        Swal.fire({
+            title: isEdit ? 'Updating Employee...' : 'Adding Employee...',
+            text: 'Please wait...',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            background: 'var(--content-bg)', 
+            color: 'var(--text-primary)',    
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        if (isEdit) { 
+            method = 'PUT';
+            apiUrl = `/admin/employees/api/${employeeIdForApiUrl}`;
+            userToSave = {
+                id: employeeIdForApiUrl, 
+                firstName: firstNameValue, 
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                department: document.getElementById('department').value,
+                jobTitle: document.getElementById('position').value,
+                joiningDate: document.getElementById('joinDate').value || null, 
+                phone: document.getElementById('phone').value,
+                roles: document.getElementById('roles').value,
+            };
+        } else { 
+            if (!passwordValue.trim()) {
+                Swal.close();
+                Swal.fire({ 
+                    title: 'Error!', 
+                    text: 'Password is required for new employees.', 
+                    icon: 'error', 
+                    background: 'var(--content-bg)', 
+                    color: 'var(--text-primary)', 
+                    confirmButtonColor: 'var(--primary)'
+                });
+                submitButton.disabled = false; 
+                return;
+            }
+            userToSave = {
+                firstName: firstNameValue, 
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                username: firstNameValue, 
+                department: document.getElementById('department').value,
+                jobTitle: document.getElementById('position').value,
+                joiningDate: document.getElementById('joinDate').value || null,
+                phone: document.getElementById('phone').value,
+                roles: document.getElementById('roles').value,
+                password: passwordValue 
+            };
+        }
+        
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken && csrfHeaderName) { 
+            headers[csrfHeaderName] = csrfToken;
+        }
+
+        fetch(apiUrl, {
+            method: method,
+            headers: headers,
+            body: JSON.stringify(userToSave)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    const userMessage = errData.message || (errData.error ? `${errData.error} - ${errData.path}` : `Request failed with status: ${response.status}`);
+                    throw new Error(userMessage);
+                }).catch(() => { 
+                     throw new Error(`Request failed with status: ${response.status}`);
+                });
+            }
+            const contentType = response.headers.get("content-type");
+            if (response.status === 204 || (response.status === 201 && !contentType) ) { 
+                 return { success: true, isNoContent: true, firstName: userToSave.firstName }; 
+            } 
+            if (contentType && contentType.includes("application/json")) { 
+                return response.json(); 
+            } 
+            return { success: true, firstName: userToSave.firstName, lastName: userToSave.lastName, unexpectedResponse: true }; 
+        })
+        .then(returnedData => { 
+            const displayName = (returnedData && returnedData.firstName) ? returnedData.firstName : userToSave.firstName;
+            Swal.fire({ 
+                title: 'Success!', 
+                text: `Employee ${displayName} ${isEdit ? 'updated' : 'added'} successfully!`, 
+                icon: 'success', 
+                background: 'var(--content-bg)', 
+                color: 'var(--text-primary)', 
+                confirmButtonColor: 'var(--primary)'
+            }); 
+            closeAddEmployeeModal(); 
+            fetchEmployees(); 
+        })
+        .catch(err => { 
+            console.error(`Error during ${isEdit ? 'update' : 'add'} employee:`, err);
+            Swal.fire({ 
+                title: 'Operation Failed!', 
+                text: `${err.message}`, 
+                icon: 'error', 
+                background: 'var(--content-bg)', 
+                color: 'var(--text-primary)', 
+                confirmButtonColor: 'var(--primary)' 
+            });
+        })
+        .finally(() => {
+            submitButton.disabled = false; 
+        });
+    });
+
+    function deleteEmployee() {
+        const employeeDbId = document.getElementById('employeeDetailsModal').getAttribute('data-employee-id');
+        if (!employeeDbId) {
+            Swal.fire({ title: 'Error!', text: "Employee ID missing.", icon: 'error', background: 'var(--content-bg)', color: 'var(--text-primary)', confirmButtonColor: 'var(--primary)'});
+            return;
+        }
+
+        Swal.fire({
+            title: 'Are you sure?', text: `Delete employee ID ${employeeDbId}? This action cannot be undone.`, icon: 'warning',
+            showCancelButton: true, confirmButtonColor: 'var(--danger-text)', cancelButtonColor: '#757575',
+            confirmButtonText: 'Yes, delete it!', background: 'var(--content-bg)', color: 'var(--text-primary)'
+        }).then(result => {
+            if (result.isConfirmed) {
+                const headers = {};
+                 if (csrfToken && csrfHeaderName) {
+                      headers[csrfHeaderName] = csrfToken;
+                 }
+                fetch(`/admin/employees/api/${employeeDbId}`, { method: 'DELETE', headers: headers })
+                .then(res => {
+                    if (!res.ok) {
+                        return res.json().then(errData => { throw new Error(errData.message || `Failed to delete: ${res.statusText}` )});
+                    }
+                    if (res.status === 204) return null; 
+                    return res.text(); 
+                })
+                .then(() => {
+                    Swal.fire({ title: 'Deleted!', text: `Employee ID ${employeeDbId} has been deleted.`, icon: 'success', background: 'var(--content-bg)', color: 'var(--text-primary)', confirmButtonColor: 'var(--primary)'});
+                    closeEmployeeDetailsModal();
+                    fetchEmployees(); 
+                })
+                .catch(err => Swal.fire({ title: 'Error!', text: `Deletion failed: ${err.message}.`, icon: 'error', background: 'var(--content-bg)', color: 'var(--text-primary)', confirmButtonColor: 'var(--primary)'}));
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchEmployees();
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 60000); 
+
+        if (localStorage.getItem('sidebarOpen') === 'true') {
+            sidebar.classList.add('open');
+            sidebarOverlay.style.display = 'block';
+            actualMainContent.classList.add('ml-64');
+            actualMainContent.classList.remove('ml-0');
+        } else {
+            sidebar.classList.remove('open');
+            sidebarOverlay.style.display = 'none';
+            actualMainContent.classList.remove('ml-64');
+            actualMainContent.classList.add('ml-0');
+        }
+        const originalToggleSidebar = window.toggleSidebar; 
+        window.toggleSidebar = function() { 
+            if (typeof originalToggleSidebar === 'function') originalToggleSidebar();
+            else { 
+                 const isOpen = sidebar.classList.toggle('open');
+                 sidebarOverlay.style.display = isOpen ? 'block' : 'none';
+                 actualMainContent.classList.toggle('ml-64', isOpen);
+                 actualMainContent.classList.toggle('ml-0', !isOpen);
+            }
+            localStorage.setItem('sidebarOpen', sidebar.classList.contains('open'));
+        }
+
+        const navLinks = document.querySelectorAll('.nav-links a');
+        const currentPath = window.location.pathname;
+        navLinks.forEach(link => {
+            link.classList.toggle('active', link.getAttribute('href') === currentPath);
+        });
+        
+        document.querySelectorAll('.modal-overlay').forEach(modalOverlay => {
+            modalOverlay.addEventListener('click', function(event) {
+                if (event.target === this) { 
+                    closeModal(this.id);
+                }
+            });
+        });
+         document.querySelectorAll('.modal-content').forEach(modalContent => {
+            modalContent.addEventListener('click', event => event.stopPropagation());
+        });
+    });
+</script>
+</body>
+</html>

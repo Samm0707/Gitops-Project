@@ -1,0 +1,1006 @@
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>XRMS | Employee Profile</title>
+<link rel="icon" type="image/x-icon" th:href="@{/images/x2.png}">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A=="
+crossorigin="anonymous" referrerpolicy="no-referrer"/>
+<meta name="_csrf" th:content="${_csrf?.token}"/>
+<meta name="_csrf_header" th:content="${_csrf?.headerName}"/>
+    <style>
+        :root {
+            --primary-color: #FF8F00;
+            --background-color: #121212;
+            --surface-color: #1E1E1E;
+            --surface-highlight: #2a2a2a;
+            --text-primary: #E0E0E0;
+            --text-secondary: #A0A0A0;
+            --border-color: #383838;
+            --success-color: #4CAF50;
+            --error-color: #f44336;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Roboto', sans-serif; background-color: var(--background-color); color: var(--text-primary); }
+        .main-content { padding: 2.5rem; }
+        .profile-container { background: var(--surface-color); padding: 2.5rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); margin-bottom: 2rem; }
+        .profile-header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem; }
+        .profile-picture-large-container { width: 100px; height: 100px; border-radius: 50%; border: 3px solid var(--primary-color); display: flex; justify-content: center; align-items: center; flex-shrink: 0; background-color: var(--surface-highlight);overflow: hidden; }
+        .profile-picture-large-container img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-name { font-size: 2.2rem; font-weight: 700; color: #FFFFFF; margin-bottom: 0.5rem; }
+        .profile-designation { font-size: 1.1rem; color: var(--text-secondary); }
+        .profile-tabs { display: flex; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; margin-bottom: 1.5rem; }
+        .tab-button { padding: 0.8rem 1.5rem; cursor: pointer; color: #BDBDBD; font-weight: 500; border: none; background: transparent; border-bottom: 3px solid transparent; transition: color 0.3s ease, border-bottom-color 0.3s ease; margin-right: 0.5rem; }
+        .tab-button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tab-button:hover:not(.active) { color: #FFFFFF; border-bottom-color: var(--text-secondary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color); }
+        .profile-section-title { color: #FFFFFF; font-size: 1.4rem; }
+        .profile-info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem 2.5rem; }
+        .info-item { display: flex; flex-direction: column; }
+        .info-label { font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .info-value { color: var(--text-primary); min-height: 24px; line-height: 1.5; word-wrap: break-word; }
+        .form-input { display: none; } /* Hide input fields by default */
+        .form-input-field { width: 100%; padding: 0.75rem; background-color: var(--surface-highlight); color: var(--text-primary); border: 1px solid #444; border-radius: 6px; font-family: 'Roboto', sans-serif; font-size: 1rem; }
+        .form-input-field:focus { border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(255, 143, 0, 0.2); outline: none; }
+        textarea.form-input-field { min-height: 80px; resize: vertical; }
+        .btn { padding: 0.6rem 1.2rem; font-size: 0.95rem; font-weight: 500; border-radius: 6px; border: 1px solid transparent; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease; }
+        .btn:disabled { cursor: not-allowed; opacity: 0.5; }
+        .btn-primary { background-color: var(--primary-color); color: #000; border-color: var(--primary-color); }
+        .btn-primary:hover:not(:disabled) { background-color: #ffac33; }
+        .btn-success { background-color: var(--success-color); color: #fff; border-color: var(--success-color); }
+        .btn-success:hover:not(:disabled) { background-color: #5cb85c; }
+        .btn-secondary { background-color: var(--surface-highlight); color: var(--text-primary); border-color: #555; }
+        .btn-secondary:hover:not(:disabled) { background-color: #444; }
+        .btn-danger-icon { background: none; border: none; color: var(--text-secondary); font-size: 1.1rem; padding: 0.5rem; cursor: pointer; }
+        .btn-danger-icon:hover { color: var(--error-color); }
+        .section-footer { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; align-items: center; gap: 1rem; }
+        .message-area { font-weight: 500; min-height: 24px; margin-right: auto; }
+        .education-entry, .experience-entry { background-color: var(--surface-highlight); padding: 1.5rem; border-radius: 8px; margin-top: 1rem; border-left: 4px solid var(--primary-color); position: relative; }
+        .education-entry .remove-btn-wrapper, .experience-entry .remove-btn-wrapper { position: absolute; top: 0.5rem; right: 0.5rem; }
+    </style>
+</head>
+<body>
+
+<div class="main-content">
+<div class="profile-container" th:if="${employee}" th:attr="data-employee-id=${employee.id}">
+    <div class="profile-header">
+        <div class="profile-picture-large-container">
+            <img th:if="${employee.profilePictureUrl}" th:src="${employee.profilePictureUrl}" alt="Profile Picture"/>
+            <i th:unless="${employee.profilePictureUrl}" class="fa-solid fa-user-tie fa-3x" style="color: #9E9E9E;"></i>
+        </div>
+        <div class="profile-info-header">
+            <h1 class="profile-name" th:text="${employee.firstName + ' ' + employee.lastName}">Employee Name</h1>
+            <p class="profile-designation" th:text="${employee.jobTitle ?: 'N/A'}">Designation</p>
+        </div>
+    </div>
+
+    <div class="profile-tabs">
+        <button class="tab-button active" onclick="window.openTab(event, 'personal')">Personal</button>
+        <button class="tab-button" onclick="window.openTab(event, 'professional')">Professional</button>
+        <button class="tab-button" onclick="window.openTab(event, 'family')">Family</button>
+        <button class="tab-button" onclick="window.openTab(event, 'education')">Education</button>
+        <button class="tab-button" onclick="window.openTab(event, 'financial')">Financial & Legal</button>
+        <button class="tab-button" onclick="window.openTab(event, 'professionalExperience')">Professional Experience</button>
+    </div>
+
+    <div id="personal" class="tab-content active">
+        <h2 class="profile-section-title"><i class="fa-solid fa-user-check"></i> Personal Details</h2>
+        <div class="profile-info-grid">
+            <div class="info-item">
+                <span class="info-label">Date of Birth</span>
+                <span class="info-value display-field" data-field="birthDate" th:text="${birthDateFormatted ?: 'N/A'}">N/A</span>
+                <input type="date" class="form-input form-input-field" data-field="birthDate" th:value="${employee.birthDate != null ? #temporals.format(employee.birthDate, 'yyyy-MM-dd') : ''}">
+            </div>
+            <div class="info-item">
+                <span class="info-label">Gender</span>
+                <span class="info-value display-field" data-field="gender" th:text="${employee.gender ?: 'N/A'}">N/A</span>
+                <select class="form-input form-input-field" data-field="gender">
+                    <option value="" th:selected="${employee.gender == null}">Select Gender</option>
+                    <option value="Male" th:selected="${employee.gender == 'Male'}">Male</option>
+                    <option value="Female" th:selected="${employee.gender == 'Female'}">Female</option>
+                    <option value="Other" th:selected="${employee.gender == 'Other'}">Other</option>
+                    <option value="Prefer not to say" th:selected="${employee.gender == 'Prefer not to say'}">Prefer not to say</option>
+                </select>
+            </div>
+            <!-- <div class="info-item">
+               <span class="info-label">Email</span>
+               <span class="info-value display-field" data-field="email" th:text="${employee.email ?: 'N/A'}">N/A</span>
+               <input type="email" class="form-input form-input-field" data-field="email" th:value="${employee.email}">
+            </div> -->
+            <div class="info-item">
+                <span class="info-label">Personal Phone</span>
+                <span class="info-value display-field" data-field="phone" th:text="${employee.phone ?: 'N/A'}">N/A</span>
+                <input type="tel" class="form-input form-input-field" data-field="phone" th:value="${employee.phone}">
+            </div>
+            <div class="info-item">
+                <span class="info-label">Nationality</span>
+                <span class="info-value display-field" data-field="nationality" th:text="${employee.nationality ?: 'N/A'}">N/A</span>
+                <input type="text" class="form-input form-input-field" data-field="nationality" th:value="${employee.nationality}">
+            </div>
+            <div class="info-item">
+                <span class="info-label">Blood Group</span>
+                <span class="info-value display-field" data-field="bloodGroup" th:text="${employee.bloodGroup ?: 'N/A'}">N/A</span>
+                <input type="text" class="form-input form-input-field" data-field="bloodGroup" th:value="${employee.bloodGroup}">
+            </div>
+            <div class="info-item" style="grid-column: 1 / -1;">
+                <span class="info-label">Address</span>
+                <span class="info-value display-field" data-field="address" th:text="${employee.address ?: 'N/A'}">N/A</span>
+                <textarea class="form-input form-input-field" data-field="address" th:text="${employee.address}"></textarea>
+            </div>
+        </div>
+        <div class="section-footer">
+            <div class="message-area" id="personalMessageArea"></div>
+            <button class="btn btn-secondary edit-btn" onclick="window.toggleEditState('personal', true)"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+            <button class="btn btn-secondary cancel-btn" onclick="window.toggleEditState('personal', false)" style="display:none;"><i class="fa-solid fa-xmark"></i> Cancel</button>
+            <button class="btn btn-success save-btn" onclick="window.saveData('personal')" style="display:none;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+        </div>
+    </div>
+
+<div id="professional" class="tab-content">
+    <h2 class="profile-section-title"><i class="fa-solid fa-briefcase"></i> Professional Details</h2>
+    <div class="profile-info-grid">
+        <div class="info-item"><span class="info-label">Employee ID</span><span class="info-value" th:text="${employee.id ?: 'N/A'}">N/A</span></div>
+            <div class="info-item">
+               <span class="info-label">Email</span>
+               <span class="info-value display-field" data-field="email" th:text="${employee.email ?: 'N/A'}">N/A</span>
+               <input type="email" class="form-input form-input-field" data-field="email" th:value="${employee.email}">
+            </div>        <div class="info-item"><span class="info-label">Department</span><span class="info-value" th:text="${employee.department ?: 'N/A'}">N/A</span></div>
+        <div class="info-item">
+            <span class="info-label">Manager</span>
+            <span class="info-value" th:text="${employee.managerFullName ?: 'N/A'}">N/A</span>
+        </div>
+        <div class="info-item"><span class="info-label">Date of Joining</span><span class="info-value" th:text="${joiningDateFormatted ?: 'N/A'}">N/A</span></div>
+        <!-- <div class="info-item"><span class="info-label">Work Location</span><span class="info-value" th:text="${employee.workLocation ?: 'N/A'}">N/A</span></div>
+        <div class="info-item"><span class="info-label">Employment Type</span><span class="info-value" th:text="${employee.employmentType ?: 'N/A'}">N/A</span></div> -->
+    </div>
+</div>
+
+    <div id="family" class="tab-content">
+        <h2 class="profile-section-title"><i class="fa-solid fa-users"></i> Family Details</h2>
+        <div class="profile-info-grid">
+                 <div class="info-item">
+                    <span class="info-label">Father's Name</span>
+                    <span class="info-value display-field" data-field="fatherName" th:text="${employee.fatherName ?: 'N/A'}">N/A</span>
+                    <input type="text" class="form-input form-input-field" data-field="fatherName" th:value="${employee.fatherName}">
+                </div>
+                 <div class="info-item">
+                    <span class="info-label">Mother's Name</span>
+                    <span class="info-value display-field" data-field="motherName" th:text="${employee.motherName ?: 'N/A'}">N/A</span>
+                    <input type="text" class="form-input form-input-field" data-field="motherName" th:value="${employee.motherName}">
+                </div>
+                 <div class="info-item">
+                    <span class="info-label">Marital Status</span>
+                    <span class="info-value display-field" data-field="maritalStatus" th:text="${employee.maritalStatus ?: 'N/A'}">N/A</span>
+                    <select class="form-input form-input-field" data-field="maritalStatus" id="maritalStatusSelect">
+                        <option value="" th:selected="${employee.maritalStatus == null}">Select Status</option>
+                        <option value="Single" th:selected="${employee.maritalStatus == 'Single'}">Single</option>
+                        <option value="Married" th:selected="${employee.maritalStatus == 'Married'}">Married</option>
+                        <option value="Divorced" th:selected="${employee.maritalStatus == 'Divorced'}">Divorced</option>
+                        <option value="Widowed" th:selected="${employee.maritalStatus == 'Widowed'}">Widowed</option>
+                    </select>
+                </div>
+                 <div class="info-item">
+                    <span class="info-label">Number of Children</span>
+                    <span class="info-value display-field" data-field="childrenCount" th:text="${employee.childrenCount != null ? employee.childrenCount : 'N/A'}">N/A</span>
+                    <input type="number" class="form-input form-input-field" data-field="childrenCount" th:value="${employee.childrenCount}" min="0">
+                </div>
+        </div>
+        <div id="spouseDetailsContainer" style="display:none;">
+              <h3 class="profile-section-title" style="margin: 1rem 0; font-size: 1.1rem; border: none; padding-bottom: 0;"><i class="fa-solid fa-heart"></i> Spouse Details</h3>
+              <div class="profile-info-grid">
+                      <div class="info-item">
+                        <span class="info-label">Spouse's Name</span>
+                        <span class="info-value display-field" data-field="spouseName" th:text="${employee.spouseName ?: 'N/A'}">N/A</span>
+                        <input type="text" class="form-input form-input-field" data-field="spouseName" th:value="${employee.spouseName}">
+                    </div>
+                      <div class="info-item">
+                        <span class="info-label">Spouse's Date of Birth</span>
+                        <span class="info-value display-field" data-field="spouseDob" th:text="${employee.spouseDob != null ? #temporals.format(employee.spouseDob, 'dd MMM, yyyy') : 'N/A'}">N/A</span>
+                        <input type="date" class="form-input form-input-field" data-field="spouseDob" th:value="${employee.spouseDob != null ? #temporals.format(employee.spouseDob, 'yyyy-MM-dd') : ''}">
+                    </div>
+              </div>
+        </div>
+        <div class="section-footer">
+            <div class="message-area" id="familyMessageArea"></div>
+            <button class="btn btn-secondary edit-btn" onclick="window.toggleEditState('family', true)"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+            <button class="btn btn-secondary cancel-btn" onclick="window.toggleEditState('family', false)" style="display:none;"><i class="fa-solid fa-xmark"></i> Cancel</button>
+            <button class="btn btn-success save-btn" onclick="window.saveData('family')" style="display:none;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+        </div>
+    </div>
+    
+<div id="education" class="tab-content">
+    <div class="section-header">
+        <h2 class="profile-section-title"><i class="fa-solid fa-graduation-cap"></i> Educational Qualifications</h2>
+        <button id="addEducationBtn" class="btn btn-primary" style="display: none;"><i class="fa-solid fa-plus"></i> Add Qualification</button>
+    </div>
+    <div id="educationEntriesContainer">
+        <!-- Education entries will be rendered here by JavaScript -->
+    </div>
+    <div class="section-footer">
+        <div class="message-area" id="educationMessageArea"></div>
+        <button class="btn btn-secondary edit-btn" onclick="window.toggleEditState('education', true)"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+        <button class="btn btn-secondary cancel-btn" onclick="window.toggleEditState('education', false)" style="display:none;"><i class="fa-solid fa-xmark"></i> Cancel</button>
+        <button class="btn btn-success save-btn" onclick="window.saveData('education')" style="display:none;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+    </div>
+</div>
+
+    <div id="financial" class="tab-content">
+        <h2 class="profile-section-title"><i class="fa-solid fa-landmark"></i> Financial & Legal Details</h2>
+        <div class="profile-info-grid">
+            <div class="info-item">
+                <span class="info-label">Bank Name</span>
+                <span class="info-value display-field" data-field="bankName" th:text="${employee.bankName ?: 'N/A'}">N/A</span>
+                <input type="text" class="form-input form-input-field" data-field="bankName" th:value="${employee.bankName}">
+            </div>
+            <div class="info-item">
+                <span class="info-label">Bank Account Number</span>
+                <span class="info-value display-field" data-field="accountNumber"
+                    th:text="${(employee.accountNumber != null && #strings.length(employee.accountNumber) >= 4) ? '************' + #strings.substring(employee.accountNumber, #strings.length(employee.accountNumber) - 4, #strings.length(employee.accountNumber)) : (employee.accountNumber != null ? employee.accountNumber : 'N/A')}">N/A</span>
+                <input type="text" class="form-input form-input-field" data-field="accountNumber" th:value="${employee.accountNumber}">
+            </div>
+            <div class="info-item">
+                <span class="info-label">IFSC Code</span>
+                <span class="info-value display-field" data-field="ifsc" th:text="${employee.ifsc ?: 'N/A'}">N/A</span>
+                <input type="text" class="form-input form-input-field" data-field="ifsc" th:value="${employee.ifsc}">
+            </div>
+            <div class="info-item">
+                <span class="info-label">Aadhaar Card Number</span>
+                <span class="info-value display-field" data-field="aadhaar"
+                    th:text="${(employee.aadhaar != null && #strings.length(employee.aadhaar) >= 4) ? '********' + #strings.substring(employee.aadhaar, #strings.length(employee.aadhaar) - 4, #strings.length(employee.aadhaar)) : (employee.aadhaar != null ? employee.aadhaar : 'N/A')}">N/A</span>
+                <input type="text" class="form-input form-input-field" data-field="aadhaar" th:value="${employee.aadhaar}" maxlength="12">
+            </div>
+            <div class="info-item">
+                <span class="info-label">PAN Card Number</span>
+                <span class="info-value display-field" data-field="pan"
+                    th:text="${(employee.pan != null && #strings.length(employee.pan) >= 6) ? #strings.substring(employee.pan, 0, 5) + '****' + #strings.substring(employee.pan, #strings.length(employee.pan) - 1, #strings.length(employee.pan)) : (employee.pan != null ? employee.pan : 'N/A')}">N/A</span>
+                <input type="text" class="form-input form-input-field" data-field="pan" th:value="${employee.pan}" maxlength="10">
+            </div>
+<div class="info-item">
+    <span class="info-label">Aadhaar Document</span>
+    <span class="info-value display-field" data-field="aadhaarDocFilename">
+        <a th:if="${employee.aadhaarDocUrl != null}" 
+           th:href="${employee.aadhaarDocUrl}" 
+           target="_blank" 
+           style="color: var(--primary-color); text-decoration: underline;"
+           th:text="${employee.aadhaarDocOriginalFilename != null ? employee.aadhaarDocOriginalFilename : 'View Document'}">
+        </a>
+        <span th:unless="${employee.aadhaarDocUrl != null}"
+              th:text="${employee.aadhaarDocOriginalFilename != null ? employee.aadhaarDocOriginalFilename : (employee.aadhaarDocFilename != null ? employee.aadhaarDocFilename : 'N/A')}">
+        </span>
+    </span>
+    <input type="file" class="form-input form-input-field" data-field="aadhaarDoc" accept=".pdf,.jpg,.jpeg,.png">
+</div>
+
+<div class="info-item">
+    <span class="info-label">PAN Document</span>
+    <span class="info-value display-field" data-field="panDocFilename">
+        <a th:if="${employee.panDocUrl != null}" 
+           th:href="${employee.panDocUrl}" 
+           target="_blank" 
+           style="color: var(--primary-color); text-decoration: underline;"
+           th:text="${employee.panDocOriginalFilename != null ? employee.panDocOriginalFilename : 'View Document'}">
+        </a>
+        <span th:unless="${employee.panDocUrl != null}"
+              th:text="${employee.panDocOriginalFilename != null ? employee.panDocOriginalFilename : (employee.panDocFilename != null ? employee.panDocFilename : 'N/A')}">
+        </span>
+    </span>
+    <input type="file" class="form-input form-input-field" data-field="panDoc" accept=".pdf,.jpg,.jpeg,.png">
+</div>
+
+        </div>
+        <div class="section-footer">
+            <div class="message-area" id="financialMessageArea"></div>
+            <button class="btn btn-secondary edit-btn" onclick="window.toggleEditState('financial', true)"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+            <button class="btn btn-secondary cancel-btn" onclick="window.toggleEditState('financial', false)" style="display:none;"><i class="fa-solid fa-xmark"></i> Cancel</button>
+            <button class="btn btn-success save-btn" onclick="window.saveData('financial')" style="display:none;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+        </div>
+    </div>
+
+    <div id="professionalExperience" class="tab-content">
+        <div class="section-header">
+            <h2 class="profile-section-title"><i class="fa-solid fa-briefcase"></i> Professional Experience</h2>
+            <button id="addExperienceBtn" class="btn btn-primary" style="display: none;"><i class="fa-solid fa-plus"></i> Add Experience</button>
+        </div>
+        <div id="professionalExperienceEntriesContainer">
+            <!-- Professional Experience entries will be rendered here by JavaScript -->
+        </div>
+        <div class="section-footer">
+            <div class="message-area" id="professionalExperienceMessageArea"></div>
+            <button class="btn btn-secondary edit-btn" onclick="window.toggleEditState('professionalExperience', true)"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+            <button class="btn btn-secondary cancel-btn" onclick="window.toggleEditState('professionalExperience', false)" style="display:none;"><i class="fa-solid fa-xmark"></i> Cancel</button>
+            <button class="btn btn-success save-btn" onclick="window.saveData('professionalExperience')" style="display:none;"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+        </div>
+    </div>
+</div>
+</div>
+<script th:inline="javascript">
+(function() {
+    "use strict";
+
+    // --- STATE & CONSTANTS ---
+    const initialState = {}; 
+    const profileContainer = document.querySelector('.profile-container');
+    const employeeId = profileContainer ? profileContainer.dataset.employeeId : null;
+
+    const csrfTokenMeta = document.querySelector('meta[name="_csrf"]');
+    const csrfHeaderNameMeta = document.querySelector('meta[name="_csrf_header"]');
+    const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute('content') : null;
+    const csrfHeaderName = csrfHeaderNameMeta ? csrfHeaderNameMeta.getAttribute('content') : null;
+
+    let rawEducationsFromServer = /*[[${employee.educations}]]*/ null;
+    let currentEducationState = (rawEducationsFromServer || []).map(edu => ({ 
+        ...edu, 
+        id: String(edu.id), 
+        // Prefer new S3 fields, fallback to old 'certFilename' if it exists in DTO
+        certUrl: edu.certUrl || null,
+        certOriginalFilename: edu.certOriginalFilename || edu.certFilename || null, 
+        isNew: false, 
+        isDeleted: false 
+    }));
+    let originalEducationState = JSON.parse(JSON.stringify(currentEducationState)); 
+
+    let rawExperiencesFromServer = /*[[${employee.professionalExperiences}]]*/ null;
+    let currentProfessionalExperienceState = (rawExperiencesFromServer || []).map(exp => ({ 
+        ...exp, 
+        id: String(exp.id), 
+        experienceLetterUrl: exp.experienceLetterUrl || null,
+        experienceLetterOriginalFilename: exp.experienceLetterOriginalFilename || exp.experienceLetterFilename || null,
+        isNew: false, 
+        isDeleted: false 
+    }));
+    let originalProfessionalExperienceState = JSON.parse(JSON.stringify(currentProfessionalExperienceState));
+
+    const educationEntriesContainer = document.getElementById('educationEntriesContainer');
+    const addEducationBtn = document.getElementById('addEducationBtn');
+    const professionalExperienceEntriesContainer = document.getElementById('professionalExperienceEntriesContainer');
+    const addExperienceBtn = document.getElementById('addExperienceBtn');
+    const maritalStatusSelectElement = document.getElementById('maritalStatusSelect');
+    const spouseDetailsContainer = document.getElementById('spouseDetailsContainer');
+
+    const educationLevels = { "HIGH_SCHOOL": "High School / Secondary", "DIPLOMA": "Diploma", "ASSOCIATE": "Associate Degree", "BACHELOR": "Bachelor's Degree", "MASTER": "Master's Degree", "DOCTORATE": "Doctorate (Ph.D.)", "POST_DOCTORATE": "Post-Doctorate", "CERTIFICATION": "Professional Certification" };
+
+    function generateLevelOptions(selectedValue) {
+        let options = '<option value="">-- Select Level --</option>';
+        for (const [key, value] of Object.entries(educationLevels)) {
+            const selected = (String(key) === String(selectedValue)) ? 'selected' : '';
+            options += `<option value="${key}" ${selected}>${value}</option>`;
+        }
+        return options;
+    }
+    
+    function formatDateForInput(dateString) {
+        if (!dateString) return '';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '';
+            return date.toISOString().split('T')[0];
+        } catch (e) {
+            console.error("Error formatting date for input:", dateString, e);
+            return '';
+        }
+    }
+
+    function formatDateForDisplay(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+             if (isNaN(date.getTime())) return 'N/A';
+            return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+        } catch (e) {
+            console.error("Error formatting date for display:", dateString, e);
+            return 'N/A';
+        }
+    }
+
+    window.toggleSpouseFields = function(status) {
+        if (spouseDetailsContainer) {
+            spouseDetailsContainer.style.display = (status === 'Married') ? 'block' : 'none';
+        }
+    };
+
+    window.openTab = function(evt, tabId) {
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        document.querySelectorAll('.tab-button').forEach(button => button.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        evt.currentTarget.classList.add('active');
+    };
+
+    window.toggleEditState = function(tabId, isEditMode) {
+        const section = document.getElementById(tabId);
+        if (!section) return;
+
+        const displayFields = section.querySelectorAll('.display-field');
+        const formInputs = section.querySelectorAll('.form-input-field');
+        const editBtn = section.querySelector('.edit-btn');
+        const saveBtn = section.querySelector('.save-btn');
+        const cancelBtn = section.querySelector('.cancel-btn');
+        const messageArea = section.querySelector('.message-area');
+
+        if (messageArea) messageArea.textContent = '';
+        if (editBtn) editBtn.style.display = isEditMode ? 'none' : 'inline-flex';
+        if (saveBtn) saveBtn.style.display = isEditMode ? 'inline-flex' : 'none';
+        if (cancelBtn) cancelBtn.style.display = isEditMode ? 'inline-flex' : 'none';
+
+        if (tabId === 'education') {
+            if(addEducationBtn) addEducationBtn.style.display = isEditMode ? 'inline-flex' : 'none';
+            if (!isEditMode) { 
+                currentEducationState = JSON.parse(JSON.stringify(originalEducationState));
+            }
+            window.renderEducationEntries(isEditMode);
+        } else if (tabId === 'professionalExperience') {
+            if(addExperienceBtn) addExperienceBtn.style.display = isEditMode ? 'inline-flex' : 'none';
+            if (!isEditMode) { 
+                currentProfessionalExperienceState = JSON.parse(JSON.stringify(originalProfessionalExperienceState));
+            }
+            window.renderProfessionalExperienceEntries(isEditMode);
+        } else { 
+            if (isEditMode) {
+                const currentValuesForCancel = {};
+                formInputs.forEach(input => {
+                    const fieldName = input.dataset.field;
+                    if (input.type !== 'file') {
+                        currentValuesForCancel[fieldName] = input.value;
+                    } else { // For file inputs, capture S3 specific info for financial tab
+                        if (tabId === 'financial') {
+                            const baseName = fieldName; // e.g. "aadhaarDoc" or "panDoc"
+                            const displayFileField = section.querySelector(`.display-field[data-field="${baseName}Filename"]`);
+                            if (displayFileField) {
+                                const anchor = displayFileField.querySelector('a');
+                                if (anchor) {
+                                     currentValuesForCancel[`${baseName}OriginalFilename`] = anchor.textContent;
+                                     currentValuesForCancel[`${baseName}Url`] = anchor.href;
+                                } else if (displayFileField.textContent !== 'N/A' && displayFileField.textContent.trim() !== '') {
+                                     currentValuesForCancel[`${baseName}OriginalFilename`] = displayFileField.textContent;
+                                }
+                            }
+                        }
+                    }
+                });
+                initialState[tabId] = JSON.parse(JSON.stringify(currentValuesForCancel));
+                const firstInput = section.querySelector('.form-input-field:not([type="file"])');
+                if (firstInput) firstInput.focus();
+            } else { 
+                const dataToRevertTo = JSON.parse(JSON.stringify(initialState[tabId] || {}));
+                formInputs.forEach(input => {
+                    if (input.type === 'file') {
+                        input.value = ''; 
+                    } else {
+                        const fieldName = input.dataset.field;
+                        let valueToSet = dataToRevertTo[fieldName];
+                        if (input.type === 'date' && valueToSet) {
+                           input.value = formatDateForInput(valueToSet);
+                        } else {
+                           input.value = (valueToSet !== undefined && valueToSet !== null) ? String(valueToSet) : '';
+                        }
+                    }
+                });
+                updateDisplayFields(tabId, dataToRevertTo); 
+            }
+            displayFields.forEach(el => el.style.display = isEditMode ? 'none' : 'block');
+            formInputs.forEach(el => el.style.display = isEditMode ? 'block' : 'none');
+        }
+    };
+    
+    function updateDisplayFields(tabId, data) {
+        const section = document.getElementById(tabId);
+        if (!section || !data) return;
+
+        section.querySelectorAll('.display-field[data-field]').forEach(displayField => {
+            const fieldName = displayField.dataset.field;
+            let newValue = 'N/A';
+            let valueFromSource = data.hasOwnProperty(fieldName) ? data[fieldName] : null;
+
+            if (tabId === 'financial' && (fieldName === 'aadhaarDocFilename' || fieldName === 'panDocFilename')) {
+                const baseName = fieldName.replace('Filename', ''); 
+                const docUrl = data[`${baseName}Url`]; // e.g. data.aadhaarDocUrl
+                const originalFilename = data[`${baseName}OriginalFilename`]; // e.g. data.aadhaarDocOriginalFilename
+
+                if (docUrl && originalFilename) {
+                    newValue = `<a href="${docUrl}" target="_blank" style="color: var(--primary-color); text-decoration: underline;">${originalFilename}</a>`;
+                } else if (originalFilename) { 
+                     newValue = originalFilename; 
+                } else if (valueFromSource && typeof valueFromSource === 'string' && valueFromSource !== 'N/A') { // Fallback to old field if S3 not set yet
+                    newValue = valueFromSource;
+                }
+                displayField.innerHTML = newValue;
+                return; 
+            }
+
+            if (valueFromSource !== null && valueFromSource !== undefined && String(valueFromSource).trim() !== "" && String(valueFromSource).toLowerCase() !== "null") {
+                if ((fieldName === 'birthDate' || fieldName === 'spouseDob') && valueFromSource) {
+                    newValue = formatDateForDisplay(valueFromSource);
+                } else if (fieldName === 'gender' || fieldName === 'maritalStatus') {
+                    const selectElement = section.querySelector(`select.form-input-field[data-field="${fieldName}"]`);
+                    if (selectElement) { 
+                        const selectedOption = Array.from(selectElement.options).find(opt => opt.value === String(valueFromSource));
+                        newValue = selectedOption ? selectedOption.text : (String(valueFromSource) || 'N/A');
+                    } else { 
+                        newValue = String(valueFromSource) || 'N/A';
+                    }
+                } else if (fieldName === 'accountNumber' && String(valueFromSource).length >= 4) {
+                     newValue = '************' + String(valueFromSource).substring(String(valueFromSource).length - 4);
+                } else if (fieldName === 'aadhaar' && String(valueFromSource).length >= 4) {
+                     newValue = '********' + String(valueFromSource).substring(String(valueFromSource).length - 4);
+                } else if (fieldName === 'pan' && String(valueFromSource).length >= 6) {
+                    const panStr = String(valueFromSource);
+                    newValue = panStr.substring(0, 5) + '****' + panStr.substring(panStr.length - 1);
+                } else {
+                    newValue = String(valueFromSource);
+                }
+            }
+            displayField.textContent = newValue;
+        });
+
+        if (tabId === 'family' && maritalStatusSelectElement) {
+            window.toggleSpouseFields(data.maritalStatus || maritalStatusSelectElement.value);
+        }
+    }
+
+    window.renderEducationEntries = function(isEditMode) {
+        if (!educationEntriesContainer) return;
+        educationEntriesContainer.innerHTML = '';
+        currentEducationState.filter(edu => !edu.isDeleted).forEach(edu => {
+            window.createEducationEntryElement(edu, isEditMode);
+        });
+    };
+
+    window.createEducationEntryElement = function(eduData, isEditMode) {
+        const entryDiv = document.createElement('div');
+        entryDiv.className = 'education-entry';
+        entryDiv.setAttribute('data-education-id', eduData.id);
+        
+        let certLinkHtml = 'N/A';
+        if (eduData.certUrl && eduData.certOriginalFilename) {
+            certLinkHtml = `<a href="${eduData.certUrl}" target="_blank" style="color: var(--primary-color); text-decoration: underline;">${eduData.certOriginalFilename}</a>`;
+        } else if (eduData.certOriginalFilename) { 
+            certLinkHtml = eduData.certOriginalFilename;
+        }
+        
+        entryDiv.innerHTML = `
+            <div class="remove-btn-wrapper" style="display: ${isEditMode ? 'block' : 'none'};">
+                <button type="button" class="btn-danger-icon remove-education-entry"><i class="fa-solid fa-trash-alt"></i></button>
+            </div>
+            <div class="profile-info-grid">
+                <div class="info-item">
+                    <span class="info-label">Education Level</span>
+                    <span class="info-value display-field" data-field="level" style="display: ${isEditMode ? 'none' : 'block'};">${educationLevels[eduData.level] || eduData.level || 'N/A'}</span>
+                    <select class="form-input form-input-field" data-field="level" style="display: ${isEditMode ? 'block' : 'none'};">${generateLevelOptions(eduData.level)}</select>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Degree / Program Name</span>
+                    <span class="info-value display-field" data-field="degree" style="display: ${isEditMode ? 'none' : 'block'};">${eduData.degree || 'N/A'}</span>
+                    <input type="text" class="form-input form-input-field" data-field="degree" value="${eduData.degree || ''}" placeholder="e.g., Bachelor of Science" style="display: ${isEditMode ? 'block' : 'none'};">
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Field of Study / Major</span>
+                    <span class="info-value display-field" data-field="fieldOfStudy" style="display: ${isEditMode ? 'none' : 'block'};">${eduData.fieldOfStudy || 'N/A'}</span>
+                    <input type="text" class="form-input form-input-field" data-field="fieldOfStudy" value="${eduData.fieldOfStudy || ''}" placeholder="e.g., Computer Science" style="display: ${isEditMode ? 'block' : 'none'};">
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Institute / University</span>
+                    <span class="info-value display-field" data-field="institute" style="display: ${isEditMode ? 'none' : 'block'};">${eduData.institute || 'N/A'}</span>
+                    <input type="text" class="form-input form-input-field" data-field="institute" value="${eduData.institute || ''}" style="display: ${isEditMode ? 'block' : 'none'};">
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Year of Completion</span>
+                    <span class="info-value display-field" data-field="year" style="display: ${isEditMode ? 'none' : 'block'};">${eduData.year || 'N/A'}</span>
+                    <input type="number" class="form-input form-input-field" data-field="year" value="${eduData.year || ''}" placeholder="e.g., 2024" style="display: ${isEditMode ? 'block' : 'none'};" min="1900" max="2100">
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Score / Grade</span>
+                    <span class="info-value display-field" data-field="score" style="display: ${isEditMode ? 'none' : 'block'};">${eduData.score || 'N/A'}</span>
+                    <input type="text" class="form-input form-input-field" data-field="score" value="${eduData.score || ''}" placeholder="e.g., 8.5 CGPA or 85%" style="display: ${isEditMode ? 'block' : 'none'};">
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">Certificate / Document</span>
+                    <span class="info-value display-field" data-field="certOriginalFilename" style="display: ${isEditMode ? 'none' : 'block'};">${certLinkHtml}</span>
+                    <input type="file" class="form-input form-input-field" data-field="certFile" style="display: ${isEditMode ? 'block' : 'none'};" accept=".pdf,.jpg,.jpeg,.png">
+                    <span class="info-value form-input current-file-display" style="display: ${isEditMode && eduData.certOriginalFilename ? 'block' : 'none'}; font-size: 0.85em; color: var(--text-secondary);">Current: ${certLinkHtml}</span>
+                </div>
+            </div>`;
+        educationEntriesContainer.appendChild(entryDiv);
+        entryDiv.querySelector('.remove-education-entry').addEventListener('click', function() {
+            const idToRemove = this.closest('.education-entry').dataset.educationId;
+            const index = currentEducationState.findIndex(edu => edu.id === idToRemove);
+            if (index !== -1) {
+                if (currentEducationState[index].isNew) { 
+                    currentEducationState.splice(index, 1);
+                } else { 
+                    currentEducationState[index].isDeleted = true;
+                }
+                window.renderEducationEntries(true); 
+            }
+        });
+    }
+
+    window.renderProfessionalExperienceEntries = function(isEditMode) {
+        if (!professionalExperienceEntriesContainer) return;
+        professionalExperienceEntriesContainer.innerHTML = '';
+        currentProfessionalExperienceState.filter(exp => !exp.isDeleted).forEach(exp => {
+            window.createProfessionalExperienceEntryElement(exp, isEditMode);
+        });
+    };
+
+    window.createProfessionalExperienceEntryElement = function(expData, isEditMode) {
+        const entryDiv = document.createElement('div');
+        entryDiv.className = 'experience-entry';
+        entryDiv.setAttribute('data-experience-id', expData.id);
+        const formattedStartDate = formatDateForDisplay(expData.startDate);
+        const formattedEndDate = expData.endDate ? formatDateForDisplay(expData.endDate) : 'Present';
+        
+        let experienceLetterLinkHtml = 'N/A';
+        if (expData.experienceLetterUrl && expData.experienceLetterOriginalFilename) {
+            experienceLetterLinkHtml = `<a href="${expData.experienceLetterUrl}" target="_blank" style="color: var(--primary-color); text-decoration: underline;">${expData.experienceLetterOriginalFilename}</a>`;
+        } else if (expData.experienceLetterOriginalFilename) {
+            experienceLetterLinkHtml = expData.experienceLetterOriginalFilename;
+        }
+        
+        entryDiv.innerHTML = `
+            <div class="remove-btn-wrapper" style="display: ${isEditMode ? 'block' : 'none'};">
+                <button type="button" class="btn-danger-icon remove-experience-entry"><i class="fa-solid fa-trash-alt"></i></button>
+            </div>
+            <div class="profile-info-grid">
+                <div class="info-item">
+                    <span class="info-label">Job Title</span>
+                    <span class="info-value display-field" data-field="jobTitle" style="display: ${isEditMode ? 'none' : 'block'};">${expData.jobTitle || 'N/A'}</span>
+                    <input type="text" class="form-input form-input-field" data-field="jobTitle" value="${expData.jobTitle || ''}" style="display: ${isEditMode ? 'block' : 'none'};">
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Company Name</span>
+                    <span class="info-value display-field" data-field="companyName" style="display: ${isEditMode ? 'none' : 'block'};">${expData.companyName || 'N/A'}</span>
+                    <input type="text" class="form-input form-input-field" data-field="companyName" value="${expData.companyName || ''}" style="display: ${isEditMode ? 'block' : 'none'};">
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Start Date</span>
+                    <span class="info-value display-field" data-field="startDate" style="display: ${isEditMode ? 'none' : 'block'};">${formattedStartDate}</span>
+                    <input type="date" class="form-input form-input-field" data-field="startDate" value="${formatDateForInput(expData.startDate)}" style="display: ${isEditMode ? 'block' : 'none'};">
+                </div>
+                <div class="info-item">
+                    <span class="info-label">End Date</span>
+                    <span class="info-value display-field" data-field="endDate" style="display: ${isEditMode ? 'none' : 'block'};">${formattedEndDate}</span>
+                    <input type="date" class="form-input form-input-field" data-field="endDate" value="${formatDateForInput(expData.endDate)}" style="display: ${isEditMode ? 'block' : 'none'};">
+                </div>
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label">Key Responsibilities</span>
+                    <span class="info-value display-field" data-field="description" style="display: ${isEditMode ? 'none' : 'block'}; white-space: pre-wrap;">${expData.description || 'N/A'}</span>
+                    <textarea class="form-input form-input-field" data-field="description" style="display: ${isEditMode ? 'block' : 'none'};">${expData.description || ''}</textarea>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Experience Letter</span>
+                    <span class="info-value display-field" data-field="experienceLetterOriginalFilename" style="display: ${isEditMode ? 'none' : 'block'};">${experienceLetterLinkHtml}</span>
+                    <input type="file" class="form-input form-input-field" data-field="experienceLetterFile" style="display: ${isEditMode ? 'block' : 'none'};" accept=".pdf,.jpg,.jpeg,.png">
+                    <span class="info-value form-input current-file-display" style="display: ${isEditMode && expData.experienceLetterOriginalFilename ? 'block' : 'none'}; font-size: 0.85em; color: var(--text-secondary);">Current: ${experienceLetterLinkHtml}</span>
+                </div>
+            </div>`;
+        professionalExperienceEntriesContainer.appendChild(entryDiv);
+        entryDiv.querySelector('.remove-experience-entry').addEventListener('click', function() {
+            const idToRemove = this.closest('.experience-entry').dataset.experienceId;
+            const index = currentProfessionalExperienceState.findIndex(exp => exp.id === idToRemove);
+            if (index !== -1) {
+                if (currentProfessionalExperienceState[index].isNew) {
+                    currentProfessionalExperienceState.splice(index, 1);
+                } else {
+                    currentProfessionalExperienceState[index].isDeleted = true;
+                }
+                window.renderProfessionalExperienceEntries(true); 
+            }
+        });
+    }
+
+    window.saveData = async function(tabId) {
+        if (!employeeId || !csrfToken) {
+            alert('Error: Critical information missing. Cannot save.');
+            return;
+        }
+        const section = document.getElementById(tabId);
+        const messageArea = section.querySelector('.message-area');
+        const saveBtn = section.querySelector('.save-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        let url = `/employees/profile/${tabId}/${employeeId}`;
+        let method = 'POST';
+        let headers = {};
+        let body;
+
+        try {
+            const formData = new FormData();
+            if (tabId === 'education') {
+                const educationChanges = [];
+                // No filesMap needed here, files are added directly to formData with unique names
+                currentEducationState.forEach(eduStateEntry => {
+                    const entryDiv = educationEntriesContainer.querySelector(`.education-entry[data-education-id="${eduStateEntry.id}"]`);
+                    let currentData = {};
+                    let fileInput = null;
+                    
+                    if (entryDiv && !eduStateEntry.isDeleted) { 
+                         entryDiv.querySelectorAll('.form-input-field[data-field]').forEach(input => {
+                            if (input.dataset.field === 'certFile') {
+                                fileInput = input; 
+                            } else { 
+                                currentData[input.dataset.field] = input.value;
+                            }
+                        });
+                    }
+
+                    if (eduStateEntry.isNew && !eduStateEntry.isDeleted) {
+                        educationChanges.push({ operation: 'CREATE', tempId: eduStateEntry.id, data: currentData });
+                        if (fileInput && fileInput.files.length > 0) {
+                            formData.append(`educationFiles-${eduStateEntry.id}`, fileInput.files[0], fileInput.files[0].name);
+                        }
+                    } else if (!eduStateEntry.isNew) {
+                        if (eduStateEntry.isDeleted) {
+                            educationChanges.push({ operation: 'DELETE', id: eduStateEntry.id });
+                        } else { 
+                            const originalEntry = originalEducationState.find(edu => edu.id === eduStateEntry.id);
+                            let hasChanged = false;
+                            if (originalEntry && entryDiv) { 
+                                hasChanged = Object.keys(currentData).some(key => {
+                                    const currentVal = currentData[key] !== null && currentData[key] !== undefined ? String(currentData[key]) : '';
+                                    const originalVal = originalEntry[key] !== null && originalEntry[key] !== undefined ? String(originalEntry[key]) : '';
+                                    return currentVal !== originalVal;
+                                });
+                            } else if (!originalEntry && entryDiv) { 
+                                hasChanged = true; 
+                            }
+                            const newFileUploaded = fileInput && fileInput.files.length > 0;
+                            if (hasChanged || newFileUploaded) {
+                                educationChanges.push({ operation: 'UPDATE', id: eduStateEntry.id, data: currentData });
+                                if (newFileUploaded) {
+                                    formData.append(`educationFiles-${eduStateEntry.id}`, fileInput.files[0], fileInput.files[0].name);
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                if (educationChanges.length === 0 && !formData.has('educationChanges') && Array.from(formData.keys()).every(key => !key.startsWith('educationFiles-'))) {
+                     messageArea.style.color = 'var(--text-secondary)';
+                     messageArea.textContent = 'No changes to save.';
+                     window.toggleEditState(tabId, false); 
+                     saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+                     return; 
+                }
+                formData.append('educationChanges', new Blob([JSON.stringify(educationChanges)], { type: 'application/json' }));
+                body = formData;
+
+            } else if (tabId === 'professionalExperience') {
+                const experienceChanges = [];
+                currentProfessionalExperienceState.forEach(expStateEntry => {
+                    const entryDiv = professionalExperienceEntriesContainer.querySelector(`.experience-entry[data-experience-id="${expStateEntry.id}"]`);
+                    let currentData = {};
+                    let fileInput = null;
+
+                    if (entryDiv && !expStateEntry.isDeleted) {
+                        entryDiv.querySelectorAll('.form-input-field[data-field]').forEach(input => {
+                            if (input.dataset.field === 'experienceLetterFile') {
+                                fileInput = input;
+                            } else {
+                                currentData[input.dataset.field] = input.value;
+                            }
+                        });
+                    }
+                    
+                    if (expStateEntry.isNew && !expStateEntry.isDeleted) {
+                        experienceChanges.push({ operation: 'CREATE', tempId: expStateEntry.id, data: currentData });
+                        if (fileInput && fileInput.files.length > 0) {
+                            formData.append(`experienceLetterFiles-${expStateEntry.id}`, fileInput.files[0], fileInput.files[0].name);
+                        }
+                    } else if (!expStateEntry.isNew) {
+                        if (expStateEntry.isDeleted) {
+                            experienceChanges.push({ operation: 'DELETE', id: expStateEntry.id });
+                        } else {
+                            const originalEntry = originalProfessionalExperienceState.find(exp => exp.id === expStateEntry.id);
+                            let hasChanged = false;
+                            if (originalEntry && entryDiv) {
+                                hasChanged = Object.keys(currentData).some(key => {
+                                    const currentVal = currentData[key] !== null && currentData[key] !== undefined ? String(currentData[key]) : '';
+                                    const originalVal = originalEntry[key] !== null && originalEntry[key] !== undefined ? String(originalEntry[key]) : '';
+                                    return currentVal !== originalVal;
+                                });
+                            } else if(!originalEntry && entryDiv) {
+                                hasChanged = true;
+                            }
+                            const newFileUploaded = fileInput && fileInput.files.length > 0;
+                            if (hasChanged || newFileUploaded) {
+                                experienceChanges.push({ operation: 'UPDATE', id: expStateEntry.id, data: currentData });
+                                if (newFileUploaded) {
+                                     formData.append(`experienceLetterFiles-${expStateEntry.id}`, fileInput.files[0], fileInput.files[0].name);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                if (experienceChanges.length === 0 && !formData.has('experienceChanges') && Array.from(formData.keys()).every(key => !key.startsWith('experienceLetterFiles-'))) {
+                     messageArea.style.color = 'var(--text-secondary)';
+                     messageArea.textContent = 'No changes to save.';
+                     window.toggleEditState(tabId, false);
+                     saveBtn.disabled = false; saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+                     return; 
+                }
+                formData.append('experienceChanges', new Blob([JSON.stringify(experienceChanges)], { type: 'application/json' }));
+                body = formData;
+
+            } else if (tabId === 'financial') {
+                const financialDto = {};
+                section.querySelectorAll('.form-input-field').forEach(input => {
+                    if (input.type === 'file' && input.files.length > 0) {
+                        formData.append(input.dataset.field, input.files[0], input.files[0].name); 
+                    } else if (input.type !== 'file') {
+                        financialDto[input.dataset.field] = input.value;
+                    }
+                });
+                formData.append('dto', new Blob([JSON.stringify(financialDto)], { type: 'application/json' }));
+                body = formData;
+            } else { 
+                const dto = {};
+                section.querySelectorAll('.form-input-field').forEach(input => { dto[input.dataset.field] = input.value; });
+                headers['Content-Type'] = 'application/json';
+                body = JSON.stringify(dto);
+            }
+
+            headers[csrfHeaderName] = csrfToken;
+            const response = await fetch(url, { method, headers, body });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'An unknown error occurred.');
+
+            messageArea.style.color = 'var(--success-color)';
+            messageArea.textContent = result.message;
+            
+            let serverEmployeeData = result.employee; 
+
+            if (serverEmployeeData) {
+                if (tabId === 'education') {
+                    if (serverEmployeeData.educations !== undefined) { 
+                        currentEducationState = serverEmployeeData.educations.map(edu => ({ 
+                            ...edu, 
+                            id: String(edu.id), 
+                            certUrl: edu.certUrl || null,
+                            certOriginalFilename: edu.certOriginalFilename || edu.certFilename || null,
+                            isNew: false, isDeleted: false 
+                        }));
+                        originalEducationState = JSON.parse(JSON.stringify(currentEducationState)); 
+                        window.renderEducationEntries(false); 
+                    }
+                } else if (tabId === 'professionalExperience') {
+                    if (serverEmployeeData.professionalExperiences !== undefined) { 
+                        currentProfessionalExperienceState = serverEmployeeData.professionalExperiences.map(exp => ({ 
+                            ...exp, 
+                            id: String(exp.id), 
+                            experienceLetterUrl: exp.experienceLetterUrl || null,
+                            experienceLetterOriginalFilename: exp.experienceLetterOriginalFilename || exp.experienceLetterFilename || null,
+                            isNew: false, isDeleted: false 
+                        }));
+                        originalProfessionalExperienceState = JSON.parse(JSON.stringify(currentProfessionalExperienceState)); 
+                        window.renderProfessionalExperienceEntries(false); 
+                    }
+                } else { 
+                    const dataToUpdateStateWith = JSON.parse(JSON.stringify(serverEmployeeData)); 
+                    initialState[tabId] = JSON.parse(JSON.stringify(dataToUpdateStateWith)); 
+                    
+                    section.querySelectorAll('.form-input-field[data-field]').forEach(input => {
+                        const fieldName = input.dataset.field;
+                        if (dataToUpdateStateWith.hasOwnProperty(fieldName)) {
+                             if (input.type === 'date' && dataToUpdateStateWith[fieldName]) {
+                                input.value = formatDateForInput(dataToUpdateStateWith[fieldName]);
+                            } else if (input.type !== 'file') { 
+                                input.value = dataToUpdateStateWith[fieldName] !== null && dataToUpdateStateWith[fieldName] !== undefined ? String(dataToUpdateStateWith[fieldName]) : '';
+                            }
+                        }
+                        if (input.type === 'file' && tabId === 'financial') { 
+                            const baseName = input.dataset.field; // e.g. "aadhaarDoc"
+                            if (dataToUpdateStateWith[`${baseName}Url`]) { // Check for the S3 URL
+                                input.value = ''; 
+                            }
+                        }
+                    });
+                    updateDisplayFields(tabId, dataToUpdateStateWith); 
+                }
+            }
+            window.toggleEditState(tabId, false); 
+
+        } catch (error) {
+            console.error(`Error saving ${tabId} data:`, error);
+            messageArea.style.color = 'var(--error-color)';
+            messageArea.textContent = error.message || 'An error occurred while saving.';
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Changes';
+        }
+    };
+
+    function initializeProfile() {
+        if (addEducationBtn) {
+            addEducationBtn.addEventListener('click', function() {
+                const newEdu = { id: 'new-' + Date.now(), isNew: true, isDeleted: false, level: '', degree: '', fieldOfStudy: '', institute: '', year: '', score: '', certUrl: null, certOriginalFilename: null };
+                currentEducationState.push(newEdu);
+                window.renderEducationEntries(true); 
+            });
+        }
+
+        if (addExperienceBtn) {
+            addExperienceBtn.addEventListener('click', function() {
+                const newExp = { id: 'new-exp-' + Date.now(), isNew: true, isDeleted: false, jobTitle: '', companyName: '', startDate: '', endDate: '', description: '', experienceLetterUrl: null, experienceLetterOriginalFilename: null };
+                currentProfessionalExperienceState.push(newExp);
+                window.renderProfessionalExperienceEntries(true);
+            });
+        }
+
+        if (maritalStatusSelectElement) {
+            window.toggleSpouseFields(maritalStatusSelectElement.value);
+            maritalStatusSelectElement.addEventListener('change', (e) => window.toggleSpouseFields(e.target.value));
+        }
+        
+        window.renderEducationEntries(false);
+        window.renderProfessionalExperienceEntries(false);
+        
+        const initialEmployeeDataFromServer = /*[[${employee}]]*/ null;
+
+        if(initialEmployeeDataFromServer) {
+            ['personal', 'family', 'financial'].forEach(tabId => {
+                const section = document.getElementById(tabId);
+                if (section) {
+                    const tabInitialData = {};
+                    const relevantFieldsForTab = {
+                        personal: ['birthDate', 'gender', 'email', 'phone', 'nationality', 'bloodGroup', 'address'],
+                        family: ['fatherName', 'motherName', 'maritalStatus', 'childrenCount', 'spouseName', 'spouseDob'],
+                        financial: ['bankName', 'accountNumber', 'ifsc', 'aadhaar', 'pan', 
+                                    'aadhaarDocUrl', 'aadhaarDocOriginalFilename', 'aadhaarDocFilename', // Keep old for fallback
+                                    'panDocUrl', 'panDocOriginalFilename', 'panDocFilename'] // Keep old for fallback
+                    };
+
+                    if(relevantFieldsForTab[tabId]){
+                        relevantFieldsForTab[tabId].forEach(key => {
+                            if (initialEmployeeDataFromServer.hasOwnProperty(key) && initialEmployeeDataFromServer[key] !== null) {
+                                tabInitialData[key] = initialEmployeeDataFromServer[key];
+                            }
+                        });
+                    }
+                    
+                    initialState[tabId] = JSON.parse(JSON.stringify(tabInitialData)); 
+
+                    section.querySelectorAll('.form-input-field[data-field]').forEach(input => {
+                        const fieldName = input.dataset.field; // e.g., "birthDate", "aadhaarDoc"
+                        let valueToSet;
+
+                        // For financial doc fields, check S3 original filename first, then URL, then old filename
+                        if (tabId === 'financial' && (fieldName === 'aadhaarDoc' || fieldName === 'panDoc')) {
+                             valueToSet = tabInitialData[`${fieldName}OriginalFilename`] || tabInitialData[`${fieldName}Url`] || tabInitialData[`${fieldName}Filename`];
+                        } else {
+                            valueToSet = tabInitialData[fieldName];
+                        }
+                        
+                        if(valueToSet !== undefined && valueToSet !== null) {
+                            if (input.type === 'date') {
+                                input.value = formatDateForInput(valueToSet);
+                            } else if (input.type !== 'file') {
+                                input.value = String(valueToSet);
+                            }
+                        } else {
+                             if (input.type !== 'file') input.value = ''; 
+                        }
+                    });
+                }
+                updateDisplayFields(tabId, initialEmployeeDataFromServer); 
+            });
+        }
+    }
+
+    if (employeeId) { 
+        initializeProfile();
+    } else {
+        console.warn("Employee ID not found. Profile script not fully initialized.");
+    }
+
+})();
+</script>
+</body>
+</html>

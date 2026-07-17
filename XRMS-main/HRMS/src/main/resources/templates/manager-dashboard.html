@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Manager Dashboard - Team Requests</title>
+    <link rel="icon" type="image/x-icon" href="/images/x2.png">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.tailwindcss.com"></script> 
+    <meta name="_csrf" th:content="${_csrf?.token}"/>
+    <meta name="_csrf_parameter_name" th:content="${_csrf?.parameterName}"/>
+    <meta name="_csrf_header" th:content="${_csrf?.headerName}"/>
+
+    <style>
+        :root {
+            --primary: #FF8F00;
+            --primary-dark: #F57C00;
+            --dark-bg: #121212;
+            --content-bg: #1E1E1E;
+            --input-bg: var(--dark-bg);
+            --border-color: #303030;
+            --text-primary: #E0E0E0;
+            --text-secondary: #BDBDBD;
+            --text-muted: #9E9E9E;
+            --white-text: #FFFFFF;
+            --table-header-bg: #252525;
+            --danger-text: #f44336;
+            --danger-bg-hover: #d32f2f;
+            --success-text: #4caf50; /* For success alerts, can be themed */
+            --success-bg: rgba(76, 175, 80, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            display: flex;
+            overflow: hidden; 
+            height: 100vh;
+        }
+
+        /* === Standard Sidebar, Header, Main Layout === */
+        .sidebar-toggle-button {
+            position: fixed; top: 1.5rem; left: 1.5rem; background: none; border: none; 
+            color: var(--primary); font-size: 1.5rem; cursor: pointer; z-index: 1060; 
+        }
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); z-index: 1045; 
+            display: none; transition: opacity 0.3s ease;
+        }
+        .sidebar {
+            width: 260px; background-color: var(--content-bg); padding: 2rem 1.5rem; 
+            position: fixed; height: 100%; display: flex; flex-direction: column; 
+            justify-content: space-between; border-right: 1px solid var(--border-color);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2); z-index: 1048; 
+            left: -260px; transition: left 0.3s ease;
+        }
+        .sidebar.open { left: 0; }
+        .sidebar-logo { max-width: 150px; /* Adjusted from 180px for consistency */ height: auto; margin-bottom: 2.5rem; display: block; margin-left: auto; margin-right: auto; }
+        .nav-links { margin-top: 1rem; }
+        .nav-links a { display: flex; align-items: center; padding: 0.8rem 1.2rem; color: var(--text-secondary); text-decoration: none; border-radius: 8px; margin-bottom: 0.6rem; font-weight: 500; transition: all 0.3s ease; background-color: var(--content-bg); }
+        .nav-links a i { margin-right: 12px; /* Matched original user CSS for this page */ font-size: 18px; /* Matched original */ width: 24px; text-align: center; color: var(--text-muted); }
+        .nav-links a:hover, .nav-links a.active { background-color: #2C2C2C; /* Darker hover */ color: var(--primary); }
+        .nav-links a:hover i, .nav-links a.active i { color: var(--primary); }
+        
+        .logout-btn { /* Adapted from user's CSS to fit theme */
+            display: flex; align-items: center; justify-content: center; width: 100%;
+            padding: 12px; background: linear-gradient(to right, var(--primary), var(--primary-dark));
+            color: white; border: none; border-radius: 6px; font-weight: 500;
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .logout-btn i { margin-right: 8px; color: white; }
+        .logout-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(255, 143, 0, 0.3); }
+
+        .app-header-area {
+            padding: 1.5rem 2.5rem; display: flex; justify-content: center; 
+            align-items: center; width: 100%; border-bottom: 1px solid var(--border-color);
+        }
+        .app-header-area .page-header-main-title { display: flex; align-items: center; gap: 0.75rem; }
+        .app-header-area .page-header-main-title .page-header-icon { font-size: 1.8rem; color: var(--primary); }
+        .app-header-area .page-header-main-title h1 { font-size: 1.6rem; color: var(--white-text); margin: 0; font-weight: 700; font-family: 'Poppins', sans-serif; letter-spacing: -0.5px; line-height: 1.2; }
+
+        .fixed-datetime-display {
+            position: fixed; top: 1.7rem; right: 2.5rem; 
+            color: var(--text-muted); font-size: 0.9rem; z-index: 1030; 
+        }
+
+        .main { /* This is the scrollable content area */
+            flex-grow: 1; padding: 2.5rem; display: flex; flex-direction: column;
+            width: 100%; overflow-y: auto;
+        }
+
+        /* === Page Specific Styles: Manager Dashboard / Team Requests === */
+        .page-subtitle { /* For "Pending Leave Requests for Approval" */
+            color: var(--text-secondary);
+            font-size: 1.1rem; /* Adjusted from 18px */
+            font-weight: 400;
+            margin-bottom: 20px; /* Space below subtitle */
+            text-align: center;
+        }
+        
+        .alert {
+            padding: 12px 16px; margin-bottom: 20px; border-radius: 6px;
+            font-weight: 500; border-left-width: 4px; border-left-style: solid;
+        }
+        .alert-success { background-color: var(--success-bg); color: var(--success-text); border-left-color: var(--success-text); }
+        .alert-danger { background-color: var(--danger-bg); color: var(--danger-text); border-left-color: var(--danger-text); }
+
+        .table-container {
+            background-color: var(--content-bg); border-radius: 8px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3); 
+            border: 1px solid var(--border-color);
+            overflow: hidden; width: 100%; 
+            max-width: 1400px; margin-left: auto; margin-right: auto;
+        }
+
+        table.requests-table { width: 100%; border-collapse: collapse; }
+        .requests-table th, .requests-table td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); text-align: left; vertical-align: middle; }
+        .requests-table th { background-color: var(--table-header-bg); color: var(--primary); text-transform: uppercase; font-weight: 600; font-size: 0.8rem; letter-spacing: 0.5px; }
+        .requests-table td { color: var(--text-primary); font-size: 0.875rem; }
+        .requests-table th.text-center, .requests-table td.text-center { text-align: center; }
+        .requests-table td.reason-cell { max-width: 250px; /* Helps with layout */ } 
+        .view-full-reason { color: var(--primary); text-decoration: none; font-size: 0.8em; cursor: pointer; margin-left: 4px; border-bottom: 1px dotted var(--primary);}
+        .view-full-reason:hover { color: var(--primary-dark); border-bottom-style: solid;}
+        .requests-table tbody tr:hover { background-color: rgba(255, 143, 0, 0.08); }
+        .requests-table tbody tr:last-child td { border-bottom: none; }
+
+        .action-form { display: inline-flex; align-items: center; gap: 8px; margin-right: 5px; }
+        .action-form:last-child { margin-right: 0; }
+
+        .action-input { /* For rejection reason */
+            padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border-color);
+            background-color: var(--input-bg); color: var(--text-primary);
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            width: 160px; /* Adjusted width */ font-size: 0.8rem;
+        }
+        .action-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255, 143, 0, 0.3); }
+
+        .btn { padding: 7px 14px; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease; color: var(--white-text); font-weight: 500; font-size: 0.8rem; line-height: 1.5; }
+        .btn:hover { transform: translateY(-1px); }
+        .btn:active { transform: translateY(0px); }
+        .btn:disabled { cursor: not-allowed; opacity: 0.6; }
+        
+        .approve-btn { background-color: var(--primary); /* Using primary for approve */ }
+        .approve-btn:hover { background-color: var(--primary-dark); }
+        .reject-btn { background-color: var(--danger-text); }
+        .reject-btn:hover { background-color: var(--danger-bg-hover); }
+
+        .view-more-btn { background-color: var(--primary); color: var(--white-text); padding: 10px 20px; border-radius: 6px; cursor: pointer; transition: background-color 0.2s ease, transform 0.1s ease; display: block; margin: 20px auto 10px auto; font-weight: 500; font-size: 0.9rem; }
+        .view-more-btn:hover { background-color: var(--primary-dark); transform: translateY(-1px); }
+
+        .hidden-row { display: none; }
+        .loader-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 2000; display: none; }
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid var(--primary); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .centered-message { text-align: center; margin-top: 30px; width: 100%; color: var(--text-muted); font-size: 1rem; }
+        
+        /* Reason Pop-up Modal Styles */
+        .reason-popup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.75); 
+            display: flex; justify-content: center; align-items: center;
+            z-index: 1070; 
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0s linear 0.2s;
+        }
+        .reason-popup-overlay.visible {
+            opacity: 1; visibility: visible;
+            transition: opacity 0.2s ease, visibility 0s linear 0s;
+        }
+        .reason-popup-content {
+            background-color: var(--content-bg);
+            padding: 25px; border-radius: 8px;
+            max-width: 450px; width: 90%;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            position: relative;
+            color: var(--text-primary);
+            transform: translateY(20px) scale(0.95);
+            transition: transform 0.2s ease;
+        }
+        .reason-popup-overlay.visible .reason-popup-content { transform: translateY(0) scale(1); }
+        .reason-popup-close {
+            position: absolute; top: 10px; right: 15px;
+            background: none; border: none; font-size: 1.8rem; 
+            color: var(--text-muted); cursor: pointer; line-height: 1; padding: 0;
+        }
+        .reason-popup-close:hover { color: var(--text-primary); }
+        .full-reason-text { 
+            font-size: 0.9rem; line-height: 1.6; 
+            max-height: 60vh; overflow-y: auto;
+            margin-top: 10px; 
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--dark-bg);
+            padding-right: 10px; 
+        }
+        .full-reason-text::-webkit-scrollbar { width: 6px; }
+        .full-reason-text::-webkit-scrollbar-track { background: var(--dark-bg); border-radius:3px;}
+        .full-reason-text::-webkit-scrollbar-thumb { background-color: var(--primary); border-radius: 3px; }
+        .reason-popup-title {
+            font-family: 'Poppins', sans-serif; font-size: 1.2rem; font-weight: 600;
+            color: var(--primary); margin-bottom: 15px; padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); } 
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-dark); }
+    </style>
+</head>
+<body>
+
+<button class="sidebar-toggle-button" onclick="toggleSidebar()">
+    <i class="fa-solid fa-bars"></i>
+</button>
+<div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<div class="sidebar">
+    <div>
+        <img src="/images/xammer_logo.png" alt="Xammer HRMS Logo" class="sidebar-logo">
+        <div class="nav-links">
+            <a href="/dashboard" class="nav-item"> <i class="fas fa-gauge-high"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="/employees/profile" class="nav-item">
+                <i class="fas fa-user-circle"></i> <span>Employee Profile</span>
+            </a>
+            <a href="/attendance/view" class="nav-item">
+                <i class="fas fa-calendar-check"></i>
+                <span>Attendance</span>
+            </a>
+            <a th:if="${employee != null and employee.roles != null and #strings.containsIgnoreCase(employee.roles.toString(), 'MANAGER')}" 
+               href="/manager/dashboard" class="nav-item active"> <i class="fas fa-users-cog"></i> <span>Team Requests</span>
+            </a>
+
+                 <a href="/manager/dashboard" class="nav-item active"> <i class="fas fa-users-cog"></i>
+                <span>Team Requests</span>
+            </a>
+            <a href="/leave/apply" class="nav-item">
+                <i class="fas fa-calendar-plus"></i> <span>Leave Request</span>
+            </a>
+       
+        </div>
+    </div>
+    <div class="sidebar-footer"> <button class="logout-btn" onclick="confirmLogout()">
+            <i class="fas fa-right-from-bracket"></i>
+            <span>Logout</span>
+        </button>
+    </div>
+</div>
+
+<div class="flex-1 flex flex-col overflow-hidden h-full ml-0 transition-all duration-300 ease-in-out" id="actualMainContent">
+    <div class="app-header-area">
+        <div class="page-header-main-title">
+            <i class="fas fa-users-cog page-header-icon"></i> <h1 th:text="${#strings.isEmpty(user.firstName)} ? 'Manager Dashboard' : 'Welcome, ' + ${user.firstName}">Manager Dashboard</h1>
+        </div>
+    </div>
+    <div class="fixed-datetime-display">
+        </div>
+
+    <main class="main">
+        <h2 class="page-subtitle">Pending Leave Requests for Approval</h2>
+        
+        <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+        
+        <div th:if="${#lists.isEmpty(managedRequests)}" class="centered-message">
+            <i class="fas fa-inbox" style="font-size: 2.5rem; margin-bottom: 1rem; color: var(--text-muted);"></i><br>
+            No pending leave requests at this time.
+        </div>
+        
+        <div class="table-container" th:unless="${#lists.isEmpty(managedRequests)}">
+            <table class="requests-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Leave Type</th>
+                        <th class="text-center">Start Date</th>
+                        <th class="text-center">End Date</th>
+                        <th>Reason</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="request, iterStat : ${managedRequests}" th:classappend="${iterStat.index >= 5} ? 'hidden-row' : ''">
+                        <td th:text="${request.user.firstName} + ' ' + ${request.user.lastName}"></td>
+                        <td th:text="${request.leaveType}"></td>
+                        <td class="text-center" th:text="${#temporals.format(request.startDate, 'dd MMM, yy')}"></td>
+                        <td class="text-center" th:text="${#temporals.format(request.endDate, 'dd MMM, yy')}"></td>
+                        <td class="reason-cell">
+                            <span th:if="${request.reason != null and #strings.length(request.reason) > 30}">
+                                <span th:text="${#strings.substring(request.reason, 0, 30) + '...'}"></span>
+                                <a href="#" class="view-full-reason" th:attr="data-full-reason=${request.reason}">(View)</a>
+                            </span>
+                            <span th:if="${request.reason != null and #strings.length(request.reason) <= 30}" th:text="${request.reason}"></span>
+                            <span th:if="${request.reason == null}">-</span>
+                        </td>
+                        <td class="text-center">
+                            <form class="action-form" th:action="@{/manager/requests/approve}" method="post" onsubmit="return disableButtonsAndShowLoader(this)">
+                                <input type="hidden" name="requestId" th:value="${request.id}" />
+                                <button type="submit" class="btn approve-btn">
+                                    <i class="fas fa-check mr-1"></i> Approve
+                                </button>
+                            </form>
+                            <form class="action-form" th:action="@{/manager/requests/reject}" method="post" onsubmit="return disableButtonsAndShowLoader(this)">
+                                <input type="hidden" name="requestId" th:value="${request.id}" />
+                                <input type="text" name="rejectionReason" class="action-input" placeholder="Reason (Optional)" /> <button type="submit" class="btn reject-btn">
+                                    <i class="fas fa-times mr-1"></i> Reject
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div th:if="${#lists.size(managedRequests) > 5}" class="text-center">
+            <button id="viewMoreBtn" class="view-more-btn btn">
+                <i class="fas fa-chevron-down mr-2"></i> View More Requests
+            </button>
+        </div>
+    </main>
+</div>
+
+<div class="loader-container" id="loaderContainer">
+    <div class="loader"></div>
+</div>
+
+<div id="reason-popup-overlay" class="reason-popup-overlay">
+    <div class="reason-popup-content">
+        <button id="reason-popup-close" aria-label="Close reason pop-up">&times;</button>
+        <h4 class="reason-popup-title">Full Leave Reason</h4>
+        <p id="full-reason-text" class="full-reason-text"></p>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const csrfToken = /*[[${_csrf?.token}]]*/ null;
+    const csrfParameterName = /*[[${_csrf?.parameterName}]]*/ '_csrf'; 
+
+    const sidebar = document.querySelector('.sidebar'); // Updated selector
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
+    const sidebarToggleButton = document.querySelector('.sidebar-toggle-button'); // Using this button
+    const actualMainContent = document.getElementById('actualMainContent'); // Make sure main content wrapper has this ID if not using class selector
+
+    function updateCurrentTime() {
+        const now = new Date();
+        const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const dateString = now.toLocaleDateString('en-US', dateOptions);
+        const timeString = now.toLocaleTimeString('en-US', timeOptions);
+        const dateTimeElement = document.querySelector('.fixed-datetime-display'); 
+        if (dateTimeElement) { dateTimeElement.textContent = `${dateString} • ${timeString}`; }
+    }
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('open');
+        sidebarOverlay.classList.toggle('open'); // Toggle overlay based on sidebar state
+        // Use the consistent class for shifting main content
+        const mainWrapper = document.querySelector('.flex-1.flex.flex-col.overflow-hidden.h-full');
+        if (mainWrapper) {
+            mainWrapper.classList.toggle('ml-64', sidebar.classList.contains('open'));
+            mainWrapper.classList.toggle('ml-0', !sidebar.classList.contains('open'));
+        }
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        sidebarOverlay.classList.remove('open');
+        const mainWrapper = document.querySelector('.flex-1.flex.flex-col.overflow-hidden.h-full');
+        if (mainWrapper) {
+            mainWrapper.classList.remove('ml-64');
+            mainWrapper.classList.add('ml-0');
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function () {
+        updateCurrentTime(); 
+        setInterval(updateCurrentTime, 60000); 
+
+        const navLinks = document.querySelectorAll('.nav-links a.nav-item'); // Specific to new sidebar
+        const currentPath = window.location.pathname;
+        let mostSpecificActiveLink = null;
+        let longestPath = 0;
+
+        navLinks.forEach(link => {
+            const linkPath = link.getAttribute('href');
+            if (linkPath === currentPath || (linkPath && linkPath !== "/" && currentPath.startsWith(linkPath) && (currentPath.length === linkPath.length || currentPath.charAt(linkPath.length) === '/'))) {
+                 link.classList.add('active');
+                 if (linkPath && linkPath.length > longestPath) {
+                    longestPath = linkPath.length;
+                    mostSpecificActiveLink = link;
+                 }
+            } else {
+                 link.classList.remove('active');
+            }
+        });
+        navLinks.forEach(link => {
+            if (link !== mostSpecificActiveLink) {
+                link.classList.remove('active');
+            }
+        });
+        
+        const viewMoreBtn = document.getElementById("viewMoreBtn");
+        if (viewMoreBtn) {
+            const hiddenRows = document.querySelectorAll("tbody tr.hidden-row");
+            if (hiddenRows.length === 0) { viewMoreBtn.style.display = "none"; }
+            viewMoreBtn.addEventListener("click", function () {
+                let allRowsWereAlreadyVisible = true;
+                document.querySelectorAll("tbody tr.hidden-row").forEach(row => {
+                    if (getComputedStyle(row).display === "none") {
+                        row.style.display = "table-row"; 
+                        allRowsWereAlreadyVisible = false; 
+                    }
+                });
+                if (allRowsWereAlreadyVisible || document.querySelectorAll("tbody tr.hidden-row[style*='display: none']").length === 0 && document.querySelectorAll("tbody tr.hidden-row.hidden-row").length === 0) {
+                    viewMoreBtn.style.display = "none";
+                }
+            });
+        }
+
+        const reasonPopupOverlay = document.getElementById('reason-popup-overlay');
+        const fullReasonTextEl = document.getElementById('full-reason-text');
+        const reasonPopupCloseBtn = document.getElementById('reason-popup-close');
+
+        document.querySelectorAll('.view-full-reason').forEach(link => {
+            link.addEventListener('click', function(event) {
+                event.preventDefault();
+                const fullReason = this.getAttribute('data-full-reason');
+                fullReasonTextEl.textContent = fullReason;
+                reasonPopupOverlay.classList.add('visible');
+                document.body.style.overflow = 'hidden'; 
+            });
+        });
+
+        function closeReasonPopup() {
+            reasonPopupOverlay.classList.remove('visible');
+            document.body.style.overflow = ''; 
+        }
+
+        if (reasonPopupCloseBtn) { reasonPopupCloseBtn.addEventListener('click', closeReasonPopup); }
+        if (reasonPopupOverlay) { 
+            reasonPopupOverlay.addEventListener('click', function(event) {
+                if (event.target === reasonPopupOverlay) { closeReasonPopup(); }
+            });
+        }
+    });
+
+    function disableButtonsAndShowLoader(form) {
+        const buttons = form.querySelectorAll('button[type="submit"]');
+        buttons.forEach(button => {
+            button.disabled = true; button.style.opacity = '0.7';
+            // Update button text to show spinner
+            const originalText = button.innerHTML; // Store original content if you want to restore it
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+             // Example: button.setAttribute('data-original-text', originalText);
+        });
+        document.getElementById('loaderContainer').style.display = 'flex';
+        // return true; // Allow default form submission
+    }
+
+    function confirmLogout() {
+        if (typeof Swal !== 'undefined') { 
+            Swal.fire({
+                title: 'Are you sure?', text: "You will be logged out.", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: 'var(--primary)', cancelButtonColor: '#757575',
+                confirmButtonText: 'Yes, logout!', background: 'var(--content-bg)', color: 'var(--text-primary)',
+                customClass: { popup: 'rounded-xl' }
+            }).then((result) => { if (result.isConfirmed) { performLogout(); } });
+        } else { 
+            if (confirm("Are you sure you want to logout?")) { performLogout(); }
+        }
+    }
+
+    function performLogout() {
+        const form = document.createElement('form');
+        form.method = 'POST'; form.action = '/logout'; 
+        if (csrfToken && csrfParameterName) { 
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden'; csrfInput.name = csrfParameterName; 
+            csrfInput.value = csrfToken; form.appendChild(csrfInput);
+        }
+        document.body.appendChild(form); form.submit();
+    }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
+</body>
+</html>

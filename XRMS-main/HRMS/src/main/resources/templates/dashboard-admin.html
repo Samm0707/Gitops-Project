@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>XRMS | Admin Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/images/x2.png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+          integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta name="_csrf" th:content="${_csrf?.token}"/>
+    <meta name="_csrf_parameter_name" th:content="${_csrf?.parameterName}"/>
+    <meta name="_csrf_header" th:content="${_csrf?.headerName}"/>
+
+    <style>
+        :root {
+            --primary: #FF8F00;
+            --primary-dark: #F57C00;
+            --dark-bg: #121212;
+            --content-bg: #1E1E1E;
+            --input-bg: var(--dark-bg); 
+            --border-color: #303030;
+            --text-primary: #E0E0E0;
+            --text-secondary: #BDBDBD;
+            --text-muted: #9E9E9E;
+            --white-text: #FFFFFF;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-primary);
+            display: flex;
+            overflow: hidden; 
+            height: 100vh;
+        }
+
+        .sidebar-toggle-button {
+            position: fixed; top: 1.5rem; left: 1.5rem; background: none; border: none; 
+            color: var(--primary); font-size: 1.5rem; cursor: pointer; z-index: 1060; 
+        }
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); z-index: 1045; 
+            display: none; transition: opacity 0.3s ease;
+        }
+        .sidebar {
+            width: 260px; background-color: var(--content-bg); padding: 2rem 1.5rem; 
+            position: fixed; height: 100%; display: flex; flex-direction: column; 
+            justify-content: space-between; border-right: 1px solid var(--border-color);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2); z-index: 1048; 
+            left: -260px; transition: left 0.3s ease; top:0;
+        }
+        .sidebar.open { left: 0; }
+        .sidebar .sidebar-logo { max-width: 150px; height: auto; margin-bottom: 2.5rem; display: block; margin-left: auto; margin-right: auto; }
+        .nav-links { margin-top: 1rem; }
+        .nav-links a { display: flex; align-items: center; padding: 0.8rem 1.2rem; color: var(--text-secondary); text-decoration: none; border-radius: 8px; margin-bottom: 0.6rem; font-weight: 500; transition: all 0.3s ease; background-color: var(--content-bg); }
+        .nav-links a i { margin-right: 0.75rem; font-size: 1.1rem; color: var(--text-muted); }
+        .nav-links a:hover, .nav-links a.active { background-color: #2C2C2C; color: var(--primary); box-shadow: 3px 3px 10px rgba(255, 143, 0, 0.25); transform: translateX(4px); }
+        .nav-links a.active i { color: var(--primary); }
+        .logout { background: linear-gradient(to right, var(--primary), var(--primary-dark)); padding: 0.8rem 1.5rem; border-radius: 8px; text-align: center; font-weight: bold; color: var(--white-text); cursor: pointer; transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); }
+        .logout:hover { background: linear-gradient(to right, var(--primary-dark), var(--primary)); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4); transform: scale(1.02); }
+        
+        .app-header-area {
+            padding: 1.5rem 2.5rem; 
+            display: flex;
+            justify-content: center; 
+            align-items: center;
+            width: 100%;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .app-header-area .page-header-main-title { 
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .app-header-area .page-header-main-title .page-header-icon { font-size: 1.8rem; color: var(--primary); }
+        .app-header-area .page-header-main-title h1 { font-size: 1.6rem; color: var(--white-text); margin: 0; font-weight: 700; font-family: 'Poppins', sans-serif; letter-spacing: -0.5px; line-height: 1.2; }
+
+        .fixed-datetime-display {
+            position: fixed;
+            top: 1.7rem; 
+            right: 2.5rem; 
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            z-index: 1030; 
+        }
+
+        /* Main content area (scrollable part below the app-header-area) */
+        .main-dashboard-content-area { /* Unique class for dashboard's main scrollable area */
+            flex-grow: 1;
+            padding: 2.5rem; 
+            width: 100%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Center the grid containers if they don't take full width */
+        }
+        
+        .dashboard-widgets-grid { /* Renamed for clarity from .dashboard-widgets */
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            width: 100%;
+            max-width: 1400px; /* Max width for content grid */
+        }
+
+        .card {
+            background: var(--content-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25), inset 0 0 2px rgba(0,0,0,0.1); /* Adjusted shadow */
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column; 
+            min-height: 200px;
+            cursor: pointer;
+        }
+        .card:hover {
+            transform: translateY(-5px); /* Slightly more lift */
+            box-shadow: 0 10px 20px rgba(var(--primary), 0.2), 0 6px 6px rgba(var(--primary),0.15), inset 0 0 3px rgba(0,0,0,0.1);
+            border-color: var(--primary); /* Highlight border on hover */
+        }
+        .card-header { display: flex; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; }
+        .card-icon { font-size: 2rem; color: var(--primary); margin-bottom: 1rem; align-self: flex-start; /* Align icon to top of its space */ }
+        .card-title { font-size: 1.2rem; font-weight: 500; color: var(--white-text); margin-bottom: 0.5rem; font-family: 'Poppins', sans-serif; }
+        .card-description { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1rem; flex-grow: 1; /* Allow description to take space */ }
+        .card-link { color: var(--primary); font-weight: 500; text-decoration: none; align-self: flex-end; margin-top: auto; }
+        .card-link:hover { text-decoration: underline; color: var(--primary-dark); }
+
+        .profile-picture-container {
+            width: 50px; height: 50px; border-radius: 50%;
+            overflow: hidden; margin-right: 1rem; border: 2px solid var(--primary);
+            display: flex; justify-content: center; align-items: center;
+            background-color: var(--dark-bg); /* Fallback for icon */
+        }
+        .profile-picture-container .fa-user-circle { font-size: 2.5em; color: var(--text-muted); }
+        .profile-picture { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .employee-info { flex-grow: 1; }
+        .employee-name { font-size: 1.1rem; font-weight: 500; color: var(--white-text); margin-bottom: 0.2rem; }
+        .employee-designation { font-size: 0.9rem; color: var(--text-muted); } /* Use muted for designation */
+        .employee-details { margin-top: 1rem; font-size: 0.85rem; color: var(--text-secondary); }
+        .employee-details p { margin-bottom: 0.4rem; }
+        .employee-details p strong { color: var(--white-text); font-weight: 500; }
+
+        .upcoming-events-list { /* Renamed for consistency */
+            overflow-y: auto; max-height: 180px; /* Adjust as needed */
+            padding-right: 0.5rem; margin-top: 0.5rem; /* Add some top margin */
+        }
+        .list-item { /* Generic class for birthday/holiday items */
+            margin-bottom: 0.6rem; padding-bottom: 0.4rem; 
+            border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.85rem; /* Slightly larger */
+        }
+        .list-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .list-item-name { color: var(--primary); font-weight: 500; } /* Consistent name styling */
+        .list-item-date { color: var(--text-secondary); font-size: 0.8rem; }
+
+        .request-count {
+            background-color: var(--primary); color: var(--white-text);
+            border-radius: 50%; width: 24px; height: 24px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: bold;
+             /* Removed margin-left: auto - will be positioned within its parent holiday-item */
+        }
+         /* For the Team Requests card content alignment */
+        .team-request-details {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        .team-request-details .status-text { color: var(--text-primary); }
+        .team-request-details .fa-clock { margin-right: 0.5rem; color: var(--text-muted); }
+
+
+        @media (max-width: 1200px) {
+            .dashboard-widgets-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .dashboard-widgets-grid { grid-template-columns: 1fr; }
+            .app-header-area { padding: 1rem 1.5rem; } /* Reduce header padding on small screens */
+            .fixed-datetime-display { display: none; } /* Hide fixed date/time on small screens */
+            .main-dashboard-content-area { padding: 1.5rem; }
+            .sidebar-toggle-button { top: 1rem; left: 1rem; }
+
+        }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); } 
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-dark); }
+
+    </style>
+</head>
+<body>
+
+<button class="sidebar-toggle-button" onclick="toggleSidebar()">
+    <i class="fa-solid fa-bars"></i>
+</button>
+<div class="sidebar-overlay" onclick="closeSidebar()"></div>
+<div class="sidebar">
+    <div>
+        <img src="/images/xammer_logo.png" alt="Xammer HRMS Logo" class="sidebar-logo">
+        <div class="nav-links">
+            <a href="/admin/dashboard" class="active"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+            <a href="/admin/employees"><i class="fa-solid fa-users"></i> Employees</a>
+            <a href="/admin/attendance"><i class="fa-solid fa-calendar-check"></i> Attendance</a>
+            <a href="/admin/requests/pending"><i class="fa-solid fa-inbox"></i> Team Requests</a>
+        </div>
+    </div>
+    <div class="logout" onclick="confirmLogout()">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </div>
+</div>
+
+<div class="flex-1 flex flex-col overflow-hidden h-full ml-0 transition-all duration-300 ease-in-out" id="actualMainContent">
+    <div class="app-header-area">
+        <div class="page-header-main-title">
+            <i class="fa-solid fa-user-shield page-header-icon"></i>
+            <h1 th:text="${'Admin Dashboard, ' + username + ' 👋'}">Admin Dashboard, admin 👋</h1>
+        </div>
+    </div>
+    <div class="fixed-datetime-display">
+        </div>
+
+    <main class="main-dashboard-content-area">
+        <div class="dashboard-widgets-grid">
+            <div class="card" onclick="window.location.href='/employees/profile'">
+                <div class="card-header">
+                    <div class="profile-picture-container">
+                        <img th:if="${employee != null and employee.profilePictureUrl != null}"
+                             th:src="${employee.profilePictureUrl}" alt="Profile Picture" class="profile-picture">
+                        <i th:unless="${employee != null and employee.profilePictureUrl != null}"
+                           class="fa-solid fa-user-circle"></i>
+                    </div>
+                    <div class="employee-info">
+                        <h3 class="employee-name" th:text="${username}">Admin User</h3>
+                        <p class="employee-designation"
+                           th:text="${employee?.jobTitle ?: 'Administrator'}">Administrator</p>
+                    </div>
+                </div>
+                <div class="employee-details">
+                    <p><strong>Member Since:</strong> 
+                       <span th:text="${joiningDateFormatted ?: 'N/A'}">N/A</span>
+                    </p>
+                    </div>
+                <a href="/employees/profile" class="card-link" style="margin-top:auto; text-align: right;">View Profile →</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='/admin/employees'">
+                <i class="fas fa-users card-icon"></i>
+                <h3 class="card-title">Employees</h3>
+                <p class="card-description">Manage all employee records, add new employees, and update existing information.</p>
+                <a href="/admin/employees" class="card-link">View All →</a>
+            </div>
+
+            <div class="card" onclick="window.location.href='/admin/attendance'">
+                <i class="fas fa-calendar-check card-icon"></i>
+                <h3 class="card-title">Attendance</h3>
+                <p class="card-description">View and manage employee attendance records, generate reports, and track time.</p>
+                <a href="/admin/attendance" class="card-link">View All →</a>
+            </div>
+        </div>
+
+        <div class="dashboard-widgets-grid"> <div class="card" onclick="window.location.href='/admin/requests/pending'">
+                <i class="fas fa-inbox card-icon"></i>
+                <h3 class="card-title">Team Requests</h3>
+                <p class="card-description">Review and approve pending leave or other requests from team members.</p>
+                <div class="team-request-details">
+                    <span class="status-text"><i class="fas fa-clock"></i> Pending Requests</span>
+                    <div class="request-count" th:text="${pendingRequestsCount != null ? pendingRequestsCount : '0'}">0</div>
+                </div>
+                <a href="/admin/requests/pending" class="card-link" style="margin-top: 1rem;">View All →</a>
+            </div>
+
+            <div class="card">
+                 <h3 class="card-title" style="display: flex; align-items: center; gap: 0.5rem;"><i class="fa-solid fa-birthday-cake" style="color: var(--primary);"></i> Upcoming Birthdays</h3>
+                <div class="upcoming-events-list">
+                    <div th:each="birthday : ${upcomingBirthdays}" class="list-item">
+                        <span class="list-item-name" th:text="${birthday.firstName + ' ' + birthday.lastName}">John Doe</span>
+                        <span class="list-item-date" th:text="${#temporals.format(birthday.birthDate, 'MMMM dd')}">May 10</span>
+                    </div>
+                    <p th:if="${upcomingBirthdays == null or #lists.isEmpty(upcomingBirthdays)}" class="text-muted" style="font-size:0.85rem; margin-top:1rem;">No upcoming birthdays.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title" style="display: flex; align-items: center; gap: 0.5rem;"><i class="fa-solid fa-calendar-alt" style="color: var(--primary);"></i> Upcoming Holidays</h3>
+                <div class="upcoming-events-list">
+                    <div th:each="holiday : ${upcomingHolidays}" class="list-item">
+                        <span class="list-item-name" th:text="${holiday.name}">Republic Day</span>
+                        <span class="list-item-date" th:text="${#temporals.format(holiday.date, 'MMMM dd')}">January 26</span>
+                    </div>
+                    <p th:if="${upcomingHolidays == null or #lists.isEmpty(upcomingHolidays)}" class="text-muted" style="font-size:0.85rem; margin-top:1rem;">No upcoming holidays.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script th:inline="javascript">
+    const csrfToken = /*[[${_csrf?.token}]]*/ null;
+    const csrfParameterName = /*[[${_csrf?.parameterName}]]*/ '_csrf'; 
+    // const csrfHeaderNameForAjax = /*[[${_csrf?.headerName}]]*/ null; // Not used on this page's JS
+
+    const sidebar = document.querySelector('.sidebar');
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
+    const actualMainContent = document.getElementById('actualMainContent'); 
+
+    function updateCurrentTime() {
+        const now = new Date();
+        const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+        const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const dateString = now.toLocaleDateString('en-US', dateOptions);
+        const timeString = now.toLocaleTimeString('en-US', timeOptions);
+        const dateTimeElement = document.querySelector('.fixed-datetime-display'); 
+        if (dateTimeElement) { dateTimeElement.textContent = `${dateString} • ${timeString}`; }
+    }
+
+    function toggleSidebar() {
+        sidebar.classList.toggle('open');
+        sidebarOverlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+        if (actualMainContent) {
+            // Instead of adding/removing ml-64, directly set the margin
+            actualMainContent.style.marginLeft = sidebar.classList.contains('open') ? '260px' : '0';
+        }
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        sidebarOverlay.style.display = 'none';
+        if (actualMainContent) {
+            actualMainContent.style.marginLeft = '0';
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function () {
+        updateCurrentTime(); 
+        setInterval(updateCurrentTime, 60000); 
+
+        // Initialize sidebar state for larger screens (optional, if you want it open by default)
+        // if (window.innerWidth >= 1024 && actualMainContent) {
+        //     sidebar.classList.add('open');
+        //     actualMainContent.style.marginLeft = '260px';
+        //     sidebarOverlay.style.display = 'block'; // Show overlay if sidebar is open by default
+        // }
+
+
+        const navLinks = document.querySelectorAll('.sidebar .nav-links a'); 
+        const currentPath = window.location.pathname;
+        let mostSpecificActiveLink = null;
+        let longestPath = 0;
+
+        navLinks.forEach(link => {
+            const linkPath = link.getAttribute('href');
+            if (linkPath === currentPath || (linkPath && linkPath !== "/" && currentPath.startsWith(linkPath) && (currentPath.length === linkPath.length || currentPath.charAt(linkPath.length) === '/'))) {
+                 link.classList.add('active');
+                 if (linkPath && linkPath.length > longestPath) {
+                    longestPath = linkPath.length;
+                    mostSpecificActiveLink = link;
+                 }
+            } else {
+                 link.classList.remove('active');
+            }
+        });
+         // Ensure only the most specific link is active
+        navLinks.forEach(link => {
+            if (link !== mostSpecificActiveLink) {
+                link.classList.remove('active');
+            }
+        });
+        // Special case for dashboard if currentPath is just /admin or /
+         if (currentPath === '/admin/dashboard' || currentPath === '/admin' || currentPath === '/') {
+             const dashboardLink = document.querySelector('.nav-links a[href="/admin/dashboard"]');
+             if(dashboardLink) dashboardLink.classList.add('active');
+         }
+
+    });
+
+    function confirmLogout() {
+        if (typeof Swal !== 'undefined') { 
+            Swal.fire({
+                title: 'Are you sure?', text: "You will be logged out.", icon: 'warning',
+                showCancelButton: true, confirmButtonColor: 'var(--primary)', cancelButtonColor: '#757575',
+                confirmButtonText: 'Yes, logout!', background: 'var(--content-bg)', color: 'var(--text-primary)',
+                customClass: { popup: 'rounded-xl' }
+            }).then((result) => { if (result.isConfirmed) { performLogout(); } });
+        } else { 
+            if (confirm("Are you sure you want to logout?")) { performLogout(); }
+        }
+    }
+
+    function performLogout() {
+        const form = document.createElement('form');
+        form.method = 'POST'; form.action = '/logout'; 
+        if (csrfToken && csrfParameterName) { 
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden'; csrfInput.name = csrfParameterName; 
+            csrfInput.value = csrfToken; form.appendChild(csrfInput);
+        }
+        document.body.appendChild(form); form.submit();
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Leave Management</title>
+    <link rel="icon" type="image/x-icon" href="/images/x2.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#0a0a0a',
+                        darker: '#050505',
+                        orange: {
+                            400: '#f97316',
+                            500: '#ea580c',
+                            600: '#c2410c'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050505;
+            color: #e5e5e5;
+        }
+
+        /* Essential for tab hiding */
+        .tab-pane:not(.show) {
+            display: none;
+        }
+
+        .datepicker {
+            background-color: #1a1a1a !important;
+            color: #e5e5e5 !important;
+            border: 1px solid #404040 !important;
+        }
+
+        .ui-datepicker {
+            background-color: #1a1a1a !important;
+            border: 1px solid #404040 !important;
+        }
+
+        .ui-datepicker-header {
+            background-color: #1a1a1a !important;
+            color: #e5e5e5 !important;
+            border-bottom: 1px solid #404040 !important;
+        }
+
+        .ui-datepicker-calendar th {
+            color: #a3a3a3 !important;
+        }
+
+        .ui-datepicker-calendar td a {
+            color: #d4d4d4 !important;
+            background-color: #1a1a1a !important;
+        }
+
+        .ui-datepicker-calendar td a:hover {
+            background-color: #262626 !important;
+        }
+
+        .ui-datepicker-calendar .ui-state-active {
+            background-color: #f48d26 !important;
+            color: white !important;
+        }
+
+        .loader {
+            border: 5px solid #1a1a1a;
+            border-top: 5px solid #f98b16;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+
+        .button-loader {
+            border: 3px solid #1a1a1a;
+            border-top: 3px solid #f98b16;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: capitalize;
+        }
+
+        .status-badge i {
+            margin-right: 0.25rem;
+        }
+
+        .pending-manager {
+            background-color: rgba(249, 115, 22, 0.1);
+            color: #f98b16;
+        }
+
+        .pending-admin {
+            background-color: rgba(249, 115, 22, 0.2);
+            color: #f98b16;
+        }
+
+        .approved {
+            background-color: rgba(22, 163, 74, 0.1);
+            color: #16a34a;
+        }
+
+        .rejected {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #f98b16;
+        }
+
+        .leave-card {
+            transition: all 0.2s ease;
+            border-left: 4px solid;
+            position: relative; /* Crucial for absolute loader */
+        }
+
+        .leave-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        .leave-card.casual {
+            border-left-color: #f98f16;
+        }
+
+        .leave-card.paid {
+            border-left-color: #16a34a;
+        }
+
+        .leave-card.sick {
+            border-left-color: #8b5cf6;
+        }
+
+        .modal-overlay {
+            background-color: rgba(5, 5, 5, 0.8);
+        }
+
+        .modal-content {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #404040;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #525252;
+        }
+
+        .nav-tabs {
+            border-bottom: 1px solid #262626;
+        }
+
+        .nav-tabs .nav-link {
+            color: #a3a3a3;
+            border: 1px solid transparent;
+            border-bottom: none;
+            margin-bottom: -1px;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: #e5e5e5;
+            border-color: transparent;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #f98b16;
+            background-color: transparent;
+            border-color: transparent;
+            border-bottom: 2px solid #f97316;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+    <header class="bg-darker border-b border-orange-600/20">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-calendar-days text-orange-500 text-2xl"></i>
+                    <h1 class="text-xl font-bold text-orange-500">Leave Management</h1>
+                </div>
+                <a th:href="@{https://xrms.xammer.in/dashboard}" class="text-orange-400 hover:text-orange-300 flex items-center">
+                    <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8">
+            <ul class="nav nav-tabs flex space-x-8" id="leaveTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-3 font-medium" id="request-tab" data-bs-toggle="tab"
+                            data-bs-target="#request" type="button" role="tab" aria-controls="request"
+                            aria-selected="true">
+                        <i class="fas fa-file-signature mr-2"></i> Request Leave
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-3 font-medium" id="status-tab" data-bs-toggle="tab"
+                            data-bs-target="#status" type="button" role="tab" aria-controls="status"
+                            aria-selected="false">
+                        <i class="fas fa-history mr-2"></i> My Requests
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="tab-content" id="leaveTabsContent">
+            <div class="tab-pane fade show active" id="request" role="tabpanel" aria-labelledby="request-tab">
+                <div class="bg-dark rounded-xl shadow-lg border border-gray-800 p-6 relative">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" th:if="${leaveBalance}">
+                        <div class="bg-darker rounded-lg p-4 border border-gray-800 hover:border-orange-500/30 transition">
+                            <div class="flex items-center">
+                                <div class="p-2 rounded-full bg-orange-500/10 text-orange-400 mr-3">
+                                    <i class="fas fa-umbrella-beach"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-400">Casual Leave</p>
+                                    <p class="text-xl font-semibold" th:text="${leaveBalance.casualLeave} + ' days'"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-darker rounded-lg p-4 border border-gray-800 hover:border-orange-500/30 transition">
+                            <div class="flex items-center">
+                                <div class="p-2 rounded-full bg-green-500/10 text-green-400 mr-3">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-400">Paid Leave</p>
+                                    <p class="text-xl font-semibold" th:text="${leaveBalance.paidLeave} + ' days'"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-darker rounded-lg p-4 border border-gray-800 hover:border-orange-500/30 transition">
+                            <div class="flex items-center">
+                                <div class="p-2 rounded-full bg-purple-500/10 text-purple-400 mr-3">
+                                    <i class="fas fa-procedures"></i>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-400">Sick Leave</p>
+                                    <p class="text-xl font-semibold" th:text="${leaveBalance.sickLeave} + ' days'"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form th:action="@{/leave/submit}" method="post" th:object="${leaveRequest}" id="leaveForm" class="space-y-4">
+                        <div class="loader-container absolute inset-0 bg-black/80 flex items-center justify-center rounded-xl hidden" id="formLoader">
+                            <div class="loader"></div>
+                        </div>
+
+                        <div th:if="${errorMessage}" class="bg-red-500/10 text-red-400 p-3 rounded-lg text-sm border border-red-500/20">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            <span th:text="${errorMessage}"></span>
+                        </div>
+
+                        <div th:if="${successMessage}" class="bg-green-500/10 text-green-400 p-3 rounded-lg text-sm border border-green-500/20">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            <span th:text="${successMessage}"></span>
+                        </div>
+
+                        <div>
+                            <label for="leaveType" class="block text-sm font-medium text-gray-400 mb-1">Leave Type</label>
+                            <select id="leaveType" th:field="*{leaveType}" required
+                                    class="w-full bg-darker border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-200">
+                                <option value="">Select Leave Type</option>
+                                <option value="Casual Leave">Casual Leave</option>
+                                <option value="Paid Leave">Paid Leave</option>
+                                <option value="Sick Leave">Sick Leave</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="startDate" class="block text-sm font-medium text-gray-400 mb-1">Start Date</label>
+                                <input type="text" id="startDate" th:field="*{startDate}" class="datepicker w-full bg-darker border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-200" required />
+                            </div>
+
+                            <div>
+                                <label for="endDate" class="block text-sm font-medium text-gray-400 mb-1">End Date</label>
+                                <input type="text" id="endDate" th:field="*{endDate}" class="datepicker w-full bg-darker border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-200" required />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="numberOfDays" class="block text-sm font-medium text-gray-400 mb-1">Number of Days</label>
+                            <input type="text" id="numberOfDays" th:field="*{numberOfDays}" readonly
+                                   class="w-full bg-darker border border-gray-700 rounded-lg px-4 py-2 cursor-not-allowed text-gray-400" />
+                        </div>
+
+                        <div>
+                            <label for="teamName" class="block text-sm font-medium text-gray-400 mb-1">Team</label>
+                            <select id="teamName" th:field="*{teamName}" required
+                                    class="w-full bg-darker border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-200">
+                                <option value="">Select Team</option>
+                                <option value="Business">Business</option>
+                                <option value="DevOps">DevOps</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="reason" class="block text-sm font-medium text-gray-400 mb-1">Reason</label>
+                            <textarea id="reason" th:field="*{reason}" rows="4" required
+                                      class="w-full bg-darker border border-gray-700 rounded-lg px-4 py-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition text-gray-200"></textarea>
+                        </div>
+
+                        <button type="submit" id="submitButton" class="w-full bg-orange-400 hover:bg-orange-350 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center mt-6">
+                            <span id="buttonText">Submit Request</span>
+                            <div class="button-loader hidden ml-2" id="buttonLoader"></div>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="status" role="tabpanel" aria-labelledby="status-tab">
+                <div class="bg-dark rounded-xl shadow-lg border border-gray-800 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold text-orange-500">
+                            <i class="fas fa-history mr-2"></i> My Leave Requests
+                        </h2>
+                        <div class="text-sm text-gray-400">
+                            <span th:text="${#lists.size(myLeaveRequests)}"></span> request(s)
+                        </div>
+                    </div>
+
+                    <div id="leaveRequestStatusContainer" class="space-y-3">
+                        <div th:each="request, iterStat : ${myLeaveRequests}"
+                             class="leave-card bg-darker rounded-lg p-4 border border-gray-800 transition-all duration-200"
+                             th:classappend="
+                                 ${(iterStat.index > 2) ? 'hidden hidden-request' : ''} + ' ' +
+                                 ${(request.leaveType == 'Casual Leave') ? 'casual' :
+                                   ((request.leaveType == 'Paid Leave') ? 'paid' : 'sick')}
+                             ">
+
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="flex items-center mb-1">
+                                        <span class="font-semibold text-lg" th:text="${request.leaveType}"></span>
+                                        <span class="mx-2 text-gray-500">•</span>
+                                        <span class="text-sm text-gray-400" th:text="${request.numberOfDays} + ' day(s)'"></span>
+                                    </div>
+
+                                    <div class="text-sm text-gray-400 mb-2">
+                                        <i class="far fa-calendar-alt mr-1"></i>
+                                        <span th:text="${#temporals.format(request.startDate, 'MMM d')} + ' - ' + ${#temporals.format(request.endDate, 'MMM d,YYYY')}"></span>
+                                    </div>
+
+                                    <div class="text-xs text-gray-500">
+                                        <i class="far fa-clock mr-1"></i>
+                                        <span th:text="${#temporals.format(request.submissionDate, 'MMM d,YYYY h:mm a')}"></span>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center space-x-2">
+                                    <span class="status-badge"
+                                          th:classappend="${request.leaveStatus.name().toLowerCase().replace('_', '-')}">
+                                        <i th:if="${request.leaveStatus.name() == 'PENDING_MANAGER'}" class="fas fa-hourglass-half"></i>
+                                        <i th:if="${request.leaveStatus.name() == 'PENDING_ADMIN'}" class="fas fa-hourglass-half"></i>
+                                        <i th:if="${request.leaveStatus.name() == 'APPROVED'}" class="fas fa-check"></i>
+                                        <i th:if="${request.leaveStatus.name() == 'REJECTED'}" class="fas fa-times"></i>
+                                        <span th:text="${request.leaveStatus.name().replace('_', ' ')}"></span>
+                                    </span>
+
+                                    <div class="flex space-x-1">
+                                        <button title="View Details"
+                                                th:onclick="'showDetails(\'' + ${request.id} + '\')'"
+                                                class="text-gray-400 hover:text-orange-400 p-1 rounded-full hover:bg-gray-800 transition">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+
+                                        <button title="Cancel Request"
+                                                th:if="${request.leaveStatus.name() == 'PENDING_MANAGER' or request.leaveStatus.name() == 'PENDING_ADMIN'}"
+                                                th:onclick="'cancelRequest(\'' + ${request.id} + '\')'"
+                                                class="text-gray-400 hover:text-red-400 p-1 rounded-full hover:bg-gray-800 transition">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div th:if="${request.reason}" class="mt-3 text-sm text-gray-300">
+                                <p class="truncate" th:text="${request.reason}"></p>
+                            </div>
+                        </div>
+
+                        <div th:if="${#lists.isEmpty(myLeaveRequests)}" class="text-center py-12 text-gray-500">
+                            <i class="fas fa-calendar-plus text-4xl mb-3"></i>
+                            <p class="text-lg">No leave requests submitted yet.</p>
+                            <p class="text-sm mt-1">Submit your first leave request using the form.</p>
+                        </div>
+
+                        <div th:if="${#lists.size(myLeaveRequests) > 3}" id="viewMoreContainer" class="pt-2">
+                            <button id="viewMoreBtn" type="button" class="w-full bg-darker hover:bg-gray-900 text-gray-400 py-2 px-4 rounded-lg border border-gray-800 transition">
+                                View More Requests
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="leaveDetailsModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-overlay absolute inset-0"></div>
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="modal-content bg-dark rounded-xl shadow-2xl w-full max-w-md mx-4 relative border border-gray-800">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-orange-500">
+                            <i class="fas fa-file-alt mr-2"></i> Leave Request Details
+                        </h2>
+                        <button onclick="document.getElementById('leaveDetailsModal').classList.add('hidden')" class="text-gray-400 hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div id="leaveDetailsContent" class="space-y-4 text-sm">
+                        <div class="animate-pulse space-y-2">
+                            <div class="h-4 bg-gray-800 rounded w-3/4"></div>
+                            <div class="h-4 bg-gray-800 rounded w-1/2"></div>
+                            <div class="h-4 bg-gray-800 rounded w-2/3"></div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end">
+                        <button onclick="document.getElementById('leaveDetailsModal').classList.add('hidden')" class="bg-darker hover:bg-gray-900 text-gray-400 py-2 px-4 rounded-lg border border-gray-800 transition">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- Tab Initialization ---
+            const tabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    // Hide all tab panes
+                    document.querySelectorAll('.tab-pane').forEach(pane => {
+                        pane.classList.remove('show', 'active');
+                    });
+
+                    // Deactivate all tabs
+                    tabs.forEach(t => {
+                        t.classList.remove('active');
+                    });
+
+                    // Activate current tab
+                    this.classList.add('active');
+
+                    // Show corresponding pane
+                    const target = this.getAttribute('data-bs-target'); // e.g., "#status"
+                    document.querySelector(target).classList.add('show', 'active');
+                });
+            });
+
+            // --- Datepicker Initialization and Logic ---
+            $(".datepicker").datepicker({
+                dateFormat: 'yy-mm-dd',
+                minDate: 0, // Prevent selecting past dates
+                beforeShow: function(input, inst) {
+                    setTimeout(function() {
+                        inst.dpDiv.css({
+                            'z-index': '9999',
+                            'font-family': 'Inter, sans-serif'
+                        });
+                    }, 0);
+                },
+                onSelect: function (dateText, inst) {
+                    const startDateInput = $('#startDate');
+                    const endDateInput = $('#endDate');
+                    const numberOfDaysInput = $('#numberOfDays');
+
+                    const startDate = startDateInput.datepicker('getDate');
+                    const endDate = endDateInput.datepicker('getDate');
+
+                    // Ensure end date is not before start date
+                    if (startDate && endDate && startDate > endDate) {
+                        if (inst.id === 'startDate') {
+                            endDateInput.datepicker('setDate', startDate);
+                        } else {
+                            startDateInput.datepicker('setDate', endDate);
+                        }
+                    }
+
+                    if (startDate && endDate) {
+                        // Calculate difference in days, including both start and end days
+                        const timeDiff = Math.abs(endDate.getTime() - startDate.getTime());
+                        const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1; // +1 to include both start and end day
+                        numberOfDaysInput.val(diffDays);
+                    } else {
+                        numberOfDaysInput.val('');
+                    }
+                }
+            });
+
+            // --- Form Submission with Better UX (Fetch API) ---
+            const submitButton = document.getElementById('submitButton');
+            const buttonText = document.getElementById('buttonText');
+            const buttonLoader = document.getElementById('buttonLoader');
+            const formLoader = document.getElementById('formLoader'); // This loader covers the whole form
+            const leaveForm = document.getElementById('leaveForm');
+
+            if (leaveForm && submitButton) {
+                leaveForm.addEventListener('submit', function (event) {
+                    event.preventDefault(); // Prevent default form submission
+
+                    // Show loading state for the form
+                    formLoader.classList.remove('hidden');
+                    submitButton.disabled = true;
+                    buttonText.textContent = 'Submitting...';
+                    buttonLoader.classList.remove('hidden');
+
+                    const formData = new FormData(leaveForm);
+
+                    fetch(leaveForm.action, {
+                        method: leaveForm.method,
+                        body: formData,
+                        headers: {
+                            // Include CSRF tokens for Spring Security (if applicable)
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]').getAttribute('content')
+                        }
+                    })
+                    .then(response => {
+                        // Hide main form loader regardless of success or failure
+                        formLoader.classList.add('hidden');
+
+                        if (!response.ok) {
+                            return response.text().then(text => { throw new Error(text) });
+                        }
+                        return response.text(); // Or response.json() if your backend returns JSON
+                    })
+                    .then(data => {
+                        // Show success state briefly before redirect
+                        submitButton.disabled = false;
+                        buttonText.textContent = 'Success! Redirecting...';
+                        buttonLoader.classList.add('hidden');
+
+                        // Remove any existing error messages
+                        document.querySelectorAll('.bg-red-500\\/10').forEach(el => el.remove());
+
+                        // Add a success message to the form
+                        const successDiv = document.createElement('div');
+                        successDiv.className = 'bg-green-500/10 text-green-400 p-3 rounded-lg text-sm mb-4 border border-green-500/20';
+                        successDiv.innerHTML = `<i class="fas fa-check-circle mr-2"></i> Leave request submitted successfully!`;
+                        leaveForm.insertBefore(successDiv, leaveForm.firstChild);
+
+                        // Clear form fields
+                        leaveForm.reset();
+                        $('#numberOfDays').val(''); // Clear calculated days
+
+                        // Redirect after a short delay
+                        setTimeout(() => {
+                             window.location.reload(); // Reload to update "My Requests" and clear messages
+                        }, 1500);
+                    })
+                    .catch(error => {
+                        // Hide main form loader
+                        formLoader.classList.add('hidden');
+
+                        // Show error state
+                        submitButton.disabled = false;
+                        buttonText.textContent = 'Submit Request';
+                        buttonLoader.classList.add('hidden');
+
+                        // Show error message
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'bg-red-500/10 text-red-400 p-3 rounded-lg text-sm mb-4 border border-red-500/20';
+                        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-2"></i> Error submitting leave request: ${error.message}`;
+
+                        // Remove any existing success or error messages before adding new one
+                        document.querySelectorAll('.bg-red-500\\/10, .bg-green-500\\/10').forEach(el => el.remove());
+
+                        // Insert error message at the top of the form
+                        leaveForm.insertBefore(errorDiv, leaveForm.firstChild);
+
+                        console.error('Error:', error);
+                    });
+                });
+            }
+
+            // --- "View More" Functionality ---
+            const viewMoreBtn = document.getElementById('viewMoreBtn');
+            const hiddenRequests = document.querySelectorAll('.hidden-request');
+
+            if (viewMoreBtn && hiddenRequests.length > 0) {
+                viewMoreBtn.addEventListener('click', function () {
+                    hiddenRequests.forEach(request => {
+                        request.classList.remove('hidden');
+                    });
+                    this.parentElement.remove(); // Remove the "View More" button after showing all
+                });
+            }
+        });
+
+        // --- Show Leave Details in Modal ---
+        function showDetails(requestId) {
+            const modal = document.getElementById('leaveDetailsModal');
+            const detailsContent = document.getElementById('leaveDetailsContent');
+
+            // Show modal with loading state
+            modal.classList.remove('hidden');
+            detailsContent.innerHTML = `
+                <div class="flex items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+                </div>
+            `;
+
+            // Fetch details
+            fetch(`/leave/details/${requestId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Format dates for display
+                    const formatDate = (dateString) => {
+                        const options = { month: 'short', day: 'numeric', year: 'numeric' };
+                        return new Date(dateString).toLocaleDateString('en-US', options);
+                    };
+
+                    const formatDateTime = (dateString) => {
+                        const options = { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: 'numeric', hour12: true };
+                        return new Date(dateString).toLocaleDateString('en-US', options);
+                    };
+
+                    let detailsHTML = `
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-gray-500 text-xs uppercase tracking-wider">Leave Type</p>
+                                <p class="font-medium">${data.leaveType}</p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-gray-500 text-xs uppercase tracking-wider">Start Date</p>
+                                    <p class="font-medium">${formatDate(data.startDate)}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-500 text-xs uppercase tracking-wider">End Date</p>
+                                    <p class="font-medium">${formatDate(data.endDate)}</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p class="text-gray-500 text-xs uppercase tracking-wider">Duration</p>
+                                <p class="font-medium">${data.numberOfDays} day(s)</p>
+                            </div>
+
+                            <div>
+                                <p class="text-gray-500 text-xs uppercase tracking-wider">Team</p>
+                                <p class="font-medium">${data.teamName}</p>
+                            </div>
+
+                            <div>
+                                <p class="text-gray-500 text-xs uppercase tracking-wider">Status</p>
+                                <p class="font-medium">
+                                    <span class="status-badge ${data.leaveStatus.toLowerCase().replace('_', '-')}">
+                                        <i class="${data.leaveStatus === 'PENDING_MANAGER' || data.leaveStatus === 'PENDING_ADMIN' ? 'fas fa-hourglass-half' : data.leaveStatus === 'APPROVED' ? 'fas fa-check' : 'fas fa-times'}"></i>
+                                        ${data.leaveStatus.replace(/_/g, ' ')}
+                                    </span>
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-gray-500 text-xs uppercase tracking-wider">Submission Date</p>
+                                <p class="font-medium">${formatDateTime(data.submissionDate)}</p>
+                            </div>
+
+                            <div>
+                                <p class="text-gray-500 text-xs uppercase tracking-wider">Reason</p>
+                                <p class="font-medium whitespace-pre-wrap">${data.reason || 'No reason provided'}</p>
+                            </div>
+
+                            ${data.managerComments ? `
+                                <div>
+                                    <p class="text-gray-500 text-xs uppercase tracking-wider">Manager Comments</p>
+                                    <p class="font-medium whitespace-pre-wrap">${data.managerComments}</p>
+                                </div>` : ''}
+                            ${data.adminComments ? `
+                                <div>
+                                    <p class="text-gray-500 text-xs uppercase tracking-wider">Admin Comments</p>
+                                    <p class="font-medium whitespace-pre-wrap">${data.adminComments}</p>
+                                </div>` : ''}
+                        </div>
+                    `;
+
+                    detailsContent.innerHTML = detailsHTML;
+                })
+                .catch(error => {
+                    detailsContent.innerHTML = `
+                        <div class="bg-red-500/10 text-red-400 p-3 rounded-lg border border-red-500/20">
+                            <i class="fas fa-exclamation-circle mr-2"></i> Error fetching leave details: ${error.message}
+                        </div>
+                    `;
+                    console.error("Error fetching leave details:", error);
+                });
+        }
+
+        // --- Cancel Leave Request ---
+        function cancelRequest(requestId) {
+            // Confirm before proceeding
+            if (confirm('Are you sure you want to cancel this leave request? This action cannot be undone.')) {
+                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+                
+                // Find the specific request card to add loader to
+                const requestCard = document.querySelector(`[onclick*="'${requestId}'"]`).closest('.leave-card');
+                
+                // Create and append a temporary loader overlay on the specific card
+                const loaderContainer = document.createElement('div');
+                loaderContainer.className = 'loader-container absolute inset-0 bg-black/80 flex items-center justify-center rounded-lg';
+                loaderContainer.innerHTML = '<div class="loader"></div>';
+                requestCard.appendChild(loaderContainer); // Append directly, assuming position:relative is already on .leave-card
+                
+                fetch(`/leave/cancel/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        [csrfHeader]: csrfToken
+                    }
+                })
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else {
+                        return response.text().then(text => { throw new Error(text) });
+                    }
+                })
+                .then(message => {
+                    // Remove loader
+                    if (requestCard && loaderContainer) {
+                        requestCard.removeChild(loaderContainer);
+                    }
+                    
+                    alert('Leave request cancelled successfully!');
+                    
+                    // Reload the page to reflect changes
+                    window.location.reload();
+                })
+                .catch(error => {
+                    // Remove loader
+                    if (requestCard && loaderContainer) {
+                        requestCard.removeChild(loaderContainer);
+                    }
+                    
+                    alert('Error cancelling leave request: ' + error.message);
+                    console.error('Error cancelling leave:', error);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

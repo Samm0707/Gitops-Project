@@ -1,0 +1,54 @@
+templates/leave-requests.html
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Leave Requests</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-light">
+
+<div class="container mt-5">
+    <h2 class="mb-4">Leave Requests</h2>
+
+    <table class="table table-dark table-bordered table-hover">
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Leave Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Manager Approval</th>
+                <th>Admin Approval</th>
+                <th sec:authorize="hasAnyAuthority('USER_ROLE_MANAGER', 'ROLE_ADMIN')">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="request : ${leaveRequests}">
+                <td th:text="${request.applicant.name}">Employee</td>
+                <td th:text="${request.leaveType}">Type</td>
+                <td th:text="${request.startDate}">Start</td>
+                <td th:text="${request.endDate}">End</td>
+                <td th:text="${request.reason}">Reason</td>
+                <td th:text="${request.status}">Status</td>
+                <td th:text="${request.managerApprovalStatus}">Manager Status</td>
+                <td th:text="${request.adminApprovalStatus}">Admin Status</td>
+
+                <!-- Actions only for manager or admin -->
+                <td sec:authorize="hasAnyAuthority('USER_ROLE_MANAGER', 'ROLE_ADMIN')">
+                    <a th:href="@{'/leave/approve/' + ${request.id}}" class="btn btn-success btn-sm me-1"
+                       th:if="${request.status != 'APPROVED'}">Approve</a>
+                    <a th:href="@{'/leave/reject/' + ${request.id}}" class="btn btn-danger btn-sm"
+                       th:if="${request.status != 'REJECTED'}">Reject</a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a href="/dashboard" class="btn btn-outline-light mt-3">Back to Dashboard</a>
+</div>
+
+</body>
+</html>
