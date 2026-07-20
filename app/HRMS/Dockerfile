@@ -1,4 +1,4 @@
-# STAGE 1: Build the application using Maven and JDK 17
+# STAGE 1: Build the application using Maven and JDK 17.0
 FROM maven:3.9-eclipse-temurin-17 AS builder
 LABEL stage=builder
 WORKDIR /app
