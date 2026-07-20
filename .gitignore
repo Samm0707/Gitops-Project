@@ -1,0 +1,14 @@
+# Terraform local state and working files — never commit these
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# terraform.tfvars can hold environment-specific values — keep the .example committed, not this
+# (uncomment if your tfvars ever holds anything sensitive)
+# terraform.tfvars
+
+# Terraform's provider version lock file is the ONE thing you WANT committed —
+# do not add .terraform.lock.hcl here.

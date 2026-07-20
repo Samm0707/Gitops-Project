@@ -1,0 +1,98 @@
+name: Build and Deploy to Remote Server 
+
+on:
+  push:
+    branches:
+      - main
+#
+env:
+  DOCKERHUB_REPO: akshay172/xrms
+  EC2_APP_PORT: 3000
+  EC2_HOST_PORT: 8081
+  EC2_CONTAINER_NAME: myhrms_on_ec2
+
+jobs:
+  deploy:
+    name: Build and Deploy Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Cache Docker layers
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: ./HRMS
+        file: ./HRMS/Dockerfile
+        push: true
+        tags: ${{ env.DOCKERHUB_REPO }}:latest
+
+    - name: Set up SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Add remote host to known hosts
+      run: |
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Run SSH command on remote server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "Starting remote deployment..."
+
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+
+          IMAGE_URI="${{ env.DOCKERHUB_REPO }}:latest"
+          echo "Pulling latest image: $IMAGE_URI"
+          docker pull $IMAGE_URI || true
+
+          echo "Stopping old container: ${{ env.EC2_CONTAINER_NAME }}"
+          docker stop ${{ env.EC2_CONTAINER_NAME }} || true
+
+          echo "Removing old container: ${{ env.EC2_CONTAINER_NAME }}"
+          docker rm ${{ env.EC2_CONTAINER_NAME }} || true
+
+          DOCKER_RUN_CMD="docker run -d --network host --name ${{ env.EC2_CONTAINER_NAME }} --restart always"
+
+          DB_ENVS="-e SPRING_DATASOURCE_URL=${{ secrets.DB_URL }} \
+                   -e SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }} \
+                   -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }} \
+                   -e SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=${{ secrets.DB_DIALECT }}"
+
+          echo "Executing docker run:"
+          echo "$DOCKER_RUN_CMD $DB_ENVS $IMAGE_URI"
+          $DOCKER_RUN_CMD $DB_ENVS $IMAGE_URI
+
+          echo "Waiting for the app to start..."
+          sleep 10
+
+          echo "Checking health endpoint (if available)..."
+          curl -f http://localhost:8081/actuator/health || echo "Health check failed or actuator not enabled."
+
+          echo "Deployment completed."
