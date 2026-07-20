@@ -13,6 +13,13 @@ module "ecr" {
   repo_name   = "hrms-app"
 }
 
+module "github_oidc" {
+  source              = "../../modules/github-oidc"
+  name_prefix         = local.name_prefix
+  github_repo         = "Samm0707/Gitops-Project" # owner/repo — must match your actual GitHub repo exactly
+  ecr_repository_arn  = module.ecr.repository_arn
+}
+
 module "eks" {
   source      = "../../modules/eks"
   name_prefix = local.name_prefix
