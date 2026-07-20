@@ -1,17 +1,16 @@
 name: CI - Build, Scan, Push
 
+# Only runs when app code actually changes — a README edit shouldn't trigger a full build+scan+push.
 on:
   push:
     branches: [main]
-    paths:
-      - 'app/HRMS/**'
+    paths: ["app/HRMS/**"]
   pull_request:
     branches: [main]
-    paths:
-      - 'app/HRMS/**'
+    paths: ["app/HRMS/**"]
 
-# id-token: write is what lets THIS workflow request a signed OIDC token from GitHub —
-# without it, the AWS login step later has nothing to hand AWS.
+# id-token: write is what lets THIS workflow request an OIDC token from GitHub —
+# without it, the OIDC authentication step later in this file cannot work at all.
 permissions:
   id-token: write
   contents: read
@@ -19,90 +18,138 @@ permissions:
 env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: prod-xrms-hrms-app
-  WORKING_DIR: app/HRMS
+  AWS_ROLE_ARN: arn:aws:iam::324048504012:role/prod-xrms-github-actions-ci
+  APP_DIR: app/HRMS
 
 jobs:
-  build-scan-push:
+  # ---------- Stage 1: does the code even build and pass its own tests? ----------
+  build-test:
+    name: Build & Test (Maven)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: '17'
+          java-version: "17"
+          distribution: "temurin"
           cache: maven
-          cache-dependency-path: ${{ env.WORKING_DIR }}/pom.xml
 
-      - name: Build & run unit tests
-        working-directory: ${{ env.WORKING_DIR }}
+      - name: Make mvnw executable
+        run: chmod +x mvnw
+
+      - name: Build and run tests
+        run: ./mvnw -B verify
+
+  # ---------- Stage 2: SAST — scans your OWN source code for insecure patterns ----------
+  sast-scan:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python (Semgrep is a Python tool)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install and run Semgrep
+        # Installing the CLI directly, not a third-party Action — one less pinned
+        # Action version that can break under you, exactly like today's Trivy issue.
         run: |
-          chmod +x mvnw
-          ./mvnw -B clean verify
+          python3 -m pip install semgrep
+          semgrep scan --config p/java --config p/owasp-top-ten --error "${{ env.APP_DIR }}"
 
-      - name: Semgrep SAST scan
-        uses: semgrep/semgrep-action@v1
+  # ---------- Stage 3: dependency audit — checks your LIBRARIES for known CVEs ----------
+  dependency-check:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    needs: build-test
+    defaults:
+      run:
+        working-directory: ${{ env.APP_DIR }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          config: auto
+          java-version: "17"
+          distribution: "temurin"
+          cache: maven
 
-      - name: Dependency vulnerability scan (source code, before build)
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          scan-type: fs
-          scan-ref: ${{ env.WORKING_DIR }}
-          severity: CRITICAL,HIGH
-          exit-code: '0'   # informational here — the image scan below is the real hard gate
+      - name: Make mvnw executable
+        run: chmod +x mvnw
 
-      # --- Everything below only runs on an actual merge to main, never on a PR ---
-      # A PR is just "someone proposed a change" — it hasn't been reviewed/approved yet,
-      # so it should never be able to push an image or touch AWS at all.
+      - name: OWASP Dependency-Check
+        # Fails the build only on CVSS 9+ (critical) findings — tune this number down
+        # once the project is stable and you want to catch HIGH severity issues too.
+        run: ./mvnw org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=9
+
+  # ---------- Stage 4: build the image, prove what's inside it, scan it, then push ----------
+  build-scan-push:
+    name: Build, Scan & Push Image
+    runs-on: ubuntu-latest
+    needs: [sast-scan, dependency-check]
+    # Only pushes to ECR on an actual merge to main — a PR build stops after scanning,
+    # it never gets AWS credentials at all. This is the PR-review gate from the study guide,
+    # applied to container images instead of Terraform plans.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Configure AWS credentials via OIDC
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
-          role-to-assume: arn:aws:iam::324048504012:role/prod-xrms-github-actions-ci
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Log in to ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build Docker image
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: ${{ env.WORKING_DIR }}
-        run: |
-          docker build -t ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }} .
+      - name: Set image tag to the git SHA
+        # This is what makes "deployed image == exact commit" a guarantee, not a guess.
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
-      - name: Generate SBOM with syft
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Build Docker image
+        working-directory: ${{ env.APP_DIR }}
+        run: docker build -t "${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.sha_short }}" .
+
+      - name: Generate SBOM (Syft)
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          image: ${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.sha_short }}
           format: cyclonedx-json
           output-file: sbom.cyclonedx.json
 
+      - name: Scan image with Trivy — fails the build on CRITICAL CVEs
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.sha_short }}
+          format: table
+          severity: CRITICAL
+          exit-code: "1"
+
+      - name: Tag and push image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          docker tag "${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.sha_short }}" \
+            "$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.sha_short }}"
+          docker push "$ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ steps.vars.outputs.sha_short }}"
+
       - name: Upload SBOM as a build artifact
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
-          name: sbom
-          path: sbom.cyclonedx.json
-
-      - name: Trivy image scan — FAILS the build on critical CVEs
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          image-ref: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-          severity: CRITICAL
-          exit-code: '1'
-          ignore-unfixed: true
-
-      - name: Push image to ECR
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: ${{ env.WORKING_DIR }}
-        run: |
-          docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          name: sbom-${{ steps.vars.outputs.sha_short }}
+          path: ${{ env.APP_DIR }}/sbom.cyclonedx.json
