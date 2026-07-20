@@ -1,7 +1,21 @@
-# The role your GitHub Actions workflow will assume. The "Condition" block below
-# is the actual security boundary: it restricts WHICH GitHub Actions runs are
-# allowed to use this role — only runs on the main branch of your exact repo.
-# A workflow on a fork, or a PR branch, or ANY other repo cannot assume this role.
+# GitHub repos created on/after 15 July 2026 emit an immutable "sub" claim:
+#   repo:<owner>@<owner_id>/<repo>@<repo_id>:ref:refs/heads/<branch>
+# We don't hardcode the numeric IDs (they're internal GitHub identifiers, not
+# something you look up) — wildcards fill that part in.
+locals {
+  github_owner     = split("/", var.github_repo)[0]
+  github_repo_name = split("/", var.github_repo)[1]
+}
+
+# The role your GitHub Actions workflow will assume.
+#
+# AWS REQUIRES any role trusting GitHub's OIDC provider to evaluate either
+# "sub" or "job_workflow_ref", scoped to something specific — this isn't
+# optional, AWS rejects the policy outright otherwise (confirmed by the
+# MalformedPolicyDocument error). "repository" and "ref" are kept as an
+# additional, explicit layer on top — defense in depth, per AWS's own
+# recommended pattern (docs.github.com/en/actions/reference/security/oidc,
+# "Configuring OpenID Connect in Amazon Web Services").
 resource "aws_iam_role" "github_actions_ci" {
   name = "${var.name_prefix}-github-actions-ci"
 
@@ -13,10 +27,11 @@ resource "aws_iam_role" "github_actions_ci" {
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
-          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+          "token.actions.githubusercontent.com:aud"        = "sts.amazonaws.com"
+          "token.actions.githubusercontent.com:repository" = var.github_repo
         }
         StringLike = {
-          "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub" = "repo:${local.github_owner}@*/${local.github_repo_name}@*:ref:refs/heads/main"
         }
       }
     }]
