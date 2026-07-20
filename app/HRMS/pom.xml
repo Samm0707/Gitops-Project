@@ -23,7 +23,11 @@
     <properties>
         <java.version>17</java.version>
 
-        <tomcat.version>10.1.35</tomcat.version>
+        <!-- Spring Boot's parent BOM exposes these exact property names to override
+             its managed dependency versions without needing to declare an explicit
+             <version> on the starter itself. 10.1.35 fixed CVE-2025-24813 but NOT
+             CVE-2026-41293 / 43512 / 43515, which were disclosed later and need 10.1.55. -->
+        <tomcat.version>10.1.55</tomcat.version>
         <spring-security.version>6.5.9</spring-security.version>
         <thymeleaf.version>3.1.5.RELEASE</thymeleaf.version>
     </properties>
