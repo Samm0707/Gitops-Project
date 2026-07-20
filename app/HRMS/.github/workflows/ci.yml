@@ -1,0 +1,108 @@
+name: CI - Build, Scan, Push
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/HRMS/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/HRMS/**'
+
+# id-token: write is what lets THIS workflow request a signed OIDC token from GitHub —
+# without it, the AWS login step later has nothing to hand AWS.
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: prod-xrms-hrms-app
+  WORKING_DIR: app/HRMS
+
+jobs:
+  build-scan-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+          cache-dependency-path: ${{ env.WORKING_DIR }}/pom.xml
+
+      - name: Build & run unit tests
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          chmod +x mvnw
+          ./mvnw -B clean verify
+
+      - name: Semgrep SAST scan
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: auto
+
+      - name: Dependency vulnerability scan (source code, before build)
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ env.WORKING_DIR }}
+          severity: CRITICAL,HIGH
+          exit-code: '0'   # informational here — the image scan below is the real hard gate
+
+      # --- Everything below only runs on an actual merge to main, never on a PR ---
+      # A PR is just "someone proposed a change" — it hasn't been reviewed/approved yet,
+      # so it should never be able to push an image or touch AWS at all.
+
+      - name: Configure AWS credentials via OIDC
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::324048504012:role/prod-xrms-github-actions-ci
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker image
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          docker build -t ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }} .
+
+      - name: Generate SBOM with syft
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          format: cyclonedx-json
+          output-file: sbom.cyclonedx.json
+
+      - name: Upload SBOM as a build artifact
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.cyclonedx.json
+
+      - name: Trivy image scan — FAILS the build on critical CVEs
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          severity: CRITICAL
+          exit-code: '1'
+          ignore-unfixed: true
+
+      - name: Push image to ECR
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          docker push ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
