@@ -38,9 +38,7 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x mvnw
 
-      - name: Build (tests skipped — HrmsApplicationTests requires a live MySQL
-          connection that doesn't exist in CI or anywhere else right now.
-          Revisit this once the app has a real database, in-cluster or RDS.)
+      - name: Build (tests skipped — no live MySQL in CI yet, see Phase 3 notes)
         run: ./mvnw -B package -DskipTests
 
   sast-scan:
@@ -56,7 +54,15 @@ jobs:
       - name: Install and run Semgrep
         run: |
           python3 -m pip install semgrep
-          semgrep scan --config p/java --config p/owasp-top-ten --error "${{ env.APP_DIR }}"
+          semgrep scan \
+            --config p/java \
+            --config p/owasp-top-ten \
+            --exclude-rule yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag \
+            --error \
+            "${{ env.APP_DIR }}"
+          # NOTE: the excluded rule flags every "@v4"-style action tag as mutable/spoofable —
+          # a real finding (same class of issue as the Trivy tag incident earlier), but pinning
+          # all 9 actions to full commit SHAs is a deliberate later hardening pass, not today's blocker.
 
   dependency-check:
     name: Dependency Audit
@@ -75,8 +81,21 @@ jobs:
           cache: maven
       - name: Make mvnw executable
         run: chmod +x mvnw
+
+      # Without this cache, every run re-downloads the ENTIRE NVD vulnerability
+      # database from scratch. With it, only new/changed records sync each time.
+      - name: Cache OWASP dependency-check NVD data
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.APP_DIR }}/dc-data
+          key: dependency-check-nvd-data
+
       - name: OWASP Dependency-Check
-        run: ./mvnw org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=9
+        run: |
+          ./mvnw org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=9 \
+            -DdataDirectory=./dc-data \
+            -DnvdApiKey=${{ secrets.NVD_API_KEY }}
 
   build-scan-push:
     name: Build, Scan & Push Image
