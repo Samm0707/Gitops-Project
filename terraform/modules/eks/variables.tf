@@ -3,9 +3,9 @@ variable "name_prefix" {
 }
 
 variable "cluster_version" {
-  description = "Kubernetes version for the EKS control plane"
+  description = "Kubernetes version for the EKS control plane. IMPORTANT: EKS charges $0.60/hr instead of $0.10/hr for any version outside its 14-month 'standard support' window — check https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions-standard.html before changing this, and keep it current."
   type        = string
-  default     = "1.29"
+  default     = "1.34" # in standard support as of mid-2026 — do not use 1.29, 1.30, 1.31, 1.32, or 1.33, all past or nearly past standard support
 }
 
 variable "vpc_id" {
