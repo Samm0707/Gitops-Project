@@ -58,11 +58,19 @@ jobs:
             --config p/java \
             --config p/owasp-top-ten \
             --exclude-rule yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag \
+            --exclude-rule java.spring.security.audit.spring-actuator-non-health-enabled.spring-actuator-dangerous-endpoints-enabled \
             --error \
             "${{ env.APP_DIR }}"
-          # NOTE: the excluded rule flags every "@v4"-style action tag as mutable/spoofable —
-          # a real finding (same class of issue as the Trivy tag incident earlier), but pinning
-          # all 9 actions to full commit SHAs is a deliberate later hardening pass, not today's blocker.
+          # Rule 1 excluded: flags every "@v4"-style action tag as mutable/spoofable — a real
+          # finding, SHA-pinning all 9 actions is a deliberate later hardening pass, not today's blocker.
+          #
+          # Rule 2 excluded: flags health+prometheus actuator endpoints as a generic risk. In this
+          # app they're served on management.server.port=8082 (see application.properties), a port
+          # with NO Service or Ingress route exposing it outside the cluster — only Prometheus,
+          # already running inside the cluster (see gitops/manifests/hrms/servicemonitor.yaml), can
+          # ever reach it. Semgrep can't see that network-level isolation from a properties file
+          # alone, so it flags the string match regardless — this is a verified false positive for
+          # this specific setup, not a suppressed real risk.
 
   dependency-check:
     name: Dependency Audit (Trivy)
