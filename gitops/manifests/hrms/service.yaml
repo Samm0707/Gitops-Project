@@ -3,10 +3,16 @@ kind: Service
 metadata:
   name: hrms-app
   namespace: hrms
+  labels:
+    app: hrms-app
 spec:
   selector:
     app: hrms-app
   ports:
-    - port: 80
+    - name: http
+      port: 80
       targetPort: 8081
+    - name: management
+      port: 8082
+      targetPort: 8082
   type: ClusterIP

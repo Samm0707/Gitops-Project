@@ -1,0 +1,21 @@
+# Tells the Prometheus you installed in Phase 4 to actually scrape this app's
+# /actuator/prometheus endpoint every 15s. Without this, Prometheus has no idea
+# your app exists — a ServiceMonitor is how kube-prometheus-stack discovers targets.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: hrms-app
+  namespace: hrms
+  labels:
+    release: prometheus   # must match the label kube-prometheus-stack's Prometheus selects on
+spec:
+  selector:
+    matchLabels:
+      app: hrms-app
+  namespaceSelector:
+    matchNames:
+      - hrms
+  endpoints:
+    - port: management
+      path: /actuator/prometheus
+      interval: 15s

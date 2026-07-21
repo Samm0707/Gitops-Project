@@ -27,3 +27,11 @@ output "rds_secret_arn" {
   description = "AWS Secrets Manager ARN holding the DB credentials — used in Phase 3 to wire this into the app pod"
   value       = module.rds.secret_arn
 }
+
+output "karpenter_controller_role_arn" {
+  value = module.karpenter.controller_role_arn
+}
+
+output "karpenter_node_instance_profile_name" {
+  value = module.karpenter.node_instance_profile_name
+}
