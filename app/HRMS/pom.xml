@@ -22,10 +22,10 @@
 
     <properties>
         <java.version>17</java.version>
-        <!-- tomcat.version / spring-security.version overrides removed —
-             Spring Boot 3.5.12's own managed versions already include the fixes
-             we previously had to force manually. Re-check with a fresh Trivy
-             scan; only re-add an override if something still shows as vulnerable. -->
+        <!-- Spring Boot 3.5.12 manages tomcat.version at 10.1.52, which is still below
+             10.1.55 — the version that actually fixes CVE-2026-41293 / 43512 / 43515.
+             This override is still required even on the newer parent. -->
+        <tomcat.version>10.1.55</tomcat.version>
         <thymeleaf.version>3.1.5.RELEASE</thymeleaf.version>
     </properties>
 
