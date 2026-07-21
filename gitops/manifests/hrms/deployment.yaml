@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hrms-app
+  namespace: hrms
+  labels:
+    app: hrms-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hrms-app
+  template:
+    metadata:
+      labels:
+        app: hrms-app
+    spec:
+      containers:
+        - name: hrms-app
+          # This tag is manual for now — Phase 4 is where CI starts updating
+          # this automatically on every merge, which is the actual point of GitOps.
+          image: 324048504012.dkr.ecr.ap-south-1.amazonaws.com/prod-xrms-hrms-app:b873d44
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: host
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: port
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: dbname
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: password
+          # Simple TCP check for now — the app doesn't expose an actuator health
+          # endpoint yet (no spring-boot-starter-actuator in pom.xml). Worth adding
+          # that dependency later for a real HTTP health check instead of just "is
+          # the port open."
+          readinessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8081
+            initialDelaySeconds: 45
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi

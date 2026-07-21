@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hrms-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Samm0707/Gitops-Project.git
+    targetRevision: main
+    path: gitops/manifests/hrms
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hrms
+  syncPolicy:
+    automated:
+      prune: true      # if a manifest is deleted from Git, ArgoCD deletes the matching resource too
+      selfHeal: true    # THIS is what powers the drift-correction demo — a manual kubectl edit gets reverted automatically
+    syncOptions:
+      - CreateNamespace=true

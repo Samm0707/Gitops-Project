@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hrms-app
+  namespace: hrms
+spec:
+  selector:
+    app: hrms-app
+  ports:
+    - port: 80
+      targetPort: 8081
+  type: ClusterIP
