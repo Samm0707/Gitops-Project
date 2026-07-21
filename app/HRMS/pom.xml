@@ -22,11 +22,6 @@
 
     <properties>
         <java.version>17</java.version>
-
-        <!-- Spring Boot's parent BOM exposes these exact property names to override
-             its managed dependency versions without needing to declare an explicit
-             <version> on the starter itself. 10.1.35 fixed CVE-2025-24813 but NOT
-             CVE-2026-41293 / 43512 / 43515, which were disclosed later and need 10.1.55. -->
         <tomcat.version>10.1.55</tomcat.version>
         <spring-security.version>6.5.9</spring-security.version>
         <thymeleaf.version>3.1.5.RELEASE</thymeleaf.version>
@@ -37,6 +32,19 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Actuator: exposes /actuator/health for readiness/liveness probes.
+             Micrometer + its Prometheus registry: exposes /actuator/prometheus,
+             which is what Argo Rollouts' AnalysisTemplate will query for error rate.
+             Without these two, there is no real metric for canary analysis to use. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
 
         <dependency>
