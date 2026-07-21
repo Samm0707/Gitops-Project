@@ -14,13 +14,16 @@ spec:
           values: ["amd64"]
         - key: karpenter.k8s.aws/instance-category
           operator: In
-          values: ["t", "c", "m"]
+          values: ["t"]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["small"]
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: default
   limits:
-    cpu: "10"
+    cpu: "4"
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
     consolidateAfter: 60s
