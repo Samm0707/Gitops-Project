@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: hrms-app
-          image: 324048504012.dkr.ecr.ap-south-1.amazonaws.com/prod-xrms-hrms-app:290b08d
+          image: 324048504012.dkr.ecr.ap-south-1.amazonaws.com/prod-xrms-hrms-app:1c0edfd
           ports:
             - name: http
               containerPort: 8081
