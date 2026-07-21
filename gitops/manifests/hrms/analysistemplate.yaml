@@ -1,0 +1,27 @@
+# Queries Prometheus for the real HTTP error rate of the CANARY pods specifically
+# (via Micrometer's standard http_server_requests_seconds_count metric). If more
+# than 5% of requests are failing, this check fails — and a failing check during
+# a canary step is what triggers Argo Rollouts' automatic rollback.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: hrms-error-rate
+  namespace: hrms
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: error-rate
+      interval: 30s
+      count: 5
+      successCondition: result[0] <= 0.05
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://prometheus-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090
+          query: |
+            sum(rate(http_server_requests_seconds_count{application="HRMS",status=~"5..",service="{{args.service-name}}"}[2m]))
+            /
+            sum(rate(http_server_requests_seconds_count{application="HRMS",service="{{args.service-name}}"}[2m]))
+            or on() vector(0)
+            
