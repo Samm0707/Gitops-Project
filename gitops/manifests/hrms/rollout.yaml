@@ -1,0 +1,89 @@
+# This REPLACES deployment.yaml — same pod spec, but kind: Rollout instead of
+# kind: Deployment, plus a canary strategy. Argo Rollouts' controller manages
+# this the way the normal Deployment controller would, but with staged traffic
+# shifts and automated analysis in between each step.
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: hrms-app
+  namespace: hrms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hrms-app
+  template:
+    metadata:
+      labels:
+        app: hrms-app
+    spec:
+      containers:
+        - name: hrms-app
+          image: 324048504012.dkr.ecr.ap-south-1.amazonaws.com/prod-xrms-hrms-app:290b08d
+          ports:
+            - name: http
+              containerPort: 8081
+            - name: management
+              containerPort: 8082
+          env:
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: host
+            - name: DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: port
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: dbname
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hrms-db-credentials
+                  key: password
+          # Now using the REAL health endpoint from Actuator, not just a TCP check —
+          # this actually verifies the app (and its DB connection) is genuinely healthy.
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            initialDelaySeconds: 45
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+  strategy:
+    canary:
+      analysis:
+        templates:
+          - templateName: hrms-error-rate
+        args:
+          - name: service-name
+            value: hrms-app
+        startingStep: 2   # only start analyzing from the 50% step onward — the first 10% step is a quick smoke check
+      steps:
+        - setWeight: 10
+        - pause: { duration: 60s }
+        - setWeight: 50
+        - pause: { duration: 90s }
+        - setWeight: 100
