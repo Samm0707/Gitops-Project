@@ -31,11 +31,9 @@ module "eks" {
   subnet_ids = concat(module.vpc.public_subnet_ids, module.vpc.private_subnet_ids)
 
   node_instance_types = ["t3.small"]
-  node_desired_size   = 2 # t3.small caps at 11 pods/node — ArgoCD alone uses ~7-8,
-                          # leaving no room for app pods on a single node. Bumping to
-                          # 2 nodes (your node_max_size already allowed this).
-  node_min_size       = 1
-  node_max_size       = 2
+  node_desired_size = 1
+  node_min_size      = 1
+  node_max_size      = 1
 }
 
 module "rds" {
