@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: hrms-app
-          image: 324048504012.dkr.ecr.ap-south-1.amazonaws.com/prod-xrms-hrms-app:bd27bf0
+          image: 324048504012.dkr.ecr.ap-south-1.amazonaws.com/prod-xrms-hrms-app:8733e25
           ports:
             - name: http
               containerPort: 8081
@@ -51,19 +51,34 @@ spec:
                 secretKeyRef:
                   name: hrms-db-credentials
                   key: password
-          # Now using the REAL health endpoint from Actuator, not just a TCP check —
-          # this actually verifies the app (and its DB connection) is genuinely healthy.
+            # OpenTelemetry: sends traces to the collector, which forwards to Tempo.
+            # Metrics/logs exporters are explicitly OFF — Prometheus already scrapes
+            # /actuator/prometheus and Promtail already ships stdout logs, so enabling
+            # OTel's own metrics/logs pipelines would just create duplicate, conflicting
+            # data instead of adding anything.
+            - name: OTEL_SERVICE_NAME
+              value: "hrms-app"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector-opentelemetry-collector.monitoring.svc.cluster.local:4317"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8082
-            initialDelaySeconds: 30
+            initialDelaySeconds: 50
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: 8082
-            initialDelaySeconds: 45
+            initialDelaySeconds: 60
             periodSeconds: 15
           resources:
             requests:
@@ -80,7 +95,7 @@ spec:
         args:
           - name: service-name
             value: hrms-app
-        startingStep: 2   # only start analyzing from the 50% step onward — the first 10% step is a quick smoke check
+        startingStep: 2
       steps:
         - setWeight: 10
         - pause: { duration: 60s }
