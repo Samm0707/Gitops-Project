@@ -28,4 +28,7 @@ resource "aws_subnet" "private" {
     Name                              = "${var.name_prefix}-private-${each.key}"
     "kubernetes.io/role/internal-elb" = "1"
   }
+  lifecycle {
+    ignore_changes = [tags, tags_all]
+  }
 }
