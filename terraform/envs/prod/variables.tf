@@ -12,3 +12,12 @@ variable "environment" {
   type    = string
   default = "prod"
 }
+variable "grafana_url" {
+  type    = string
+  default = "http://localhost:3000"
+}
+
+variable "grafana_auth" {
+  type      = string
+  sensitive = true
+}

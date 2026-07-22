@@ -55,3 +55,6 @@ module "karpenter" {
   private_subnet_ids  = module.vpc.private_subnet_ids
   cluster_security_group_id = module.eks.cluster_security_group_id
 }
+module "grafana_dashboard" {
+  source = "../../modules/grafana-dashboard"
+}
