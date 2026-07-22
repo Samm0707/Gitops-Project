@@ -1,7 +1,3 @@
-# This REPLACES deployment.yaml — same pod spec, but kind: Rollout instead of
-# kind: Deployment, plus a canary strategy. Argo Rollouts' controller manages
-# this the way the normal Deployment controller would, but with staged traffic
-# shifts and automated analysis in between each step.
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
@@ -51,11 +47,6 @@ spec:
                 secretKeyRef:
                   name: hrms-db-credentials
                   key: password
-            # OpenTelemetry: sends traces to the collector, which forwards to Tempo.
-            # Metrics/logs exporters are explicitly OFF — Prometheus already scrapes
-            # /actuator/prometheus and Promtail already ships stdout logs, so enabling
-            # OTel's own metrics/logs pipelines would just create duplicate, conflicting
-            # data instead of adding anything.
             - name: OTEL_SERVICE_NAME
               value: "hrms-app"
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -68,17 +59,25 @@ spec:
               value: "none"
             - name: OTEL_LOGS_EXPORTER
               value: "none"
+          # Per Kubernetes docs: startupProbe is the purpose-built mechanism for slow
+          # starting containers. It gates liveness/readiness entirely until it succeeds
+          # once — up to failureThreshold * periodSeconds = 30 * 5 = 150s budget, well
+          # above the observed 81.8s startup with the OTel agent attached.
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            failureThreshold: 30
+            periodSeconds: 5
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: 8082
-            initialDelaySeconds: 50
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: 8082
-            initialDelaySeconds: 60
             periodSeconds: 15
           resources:
             requests:
