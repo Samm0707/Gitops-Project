@@ -12,12 +12,12 @@ spec:
         - key: kubernetes.io/arch
           operator: In
           values: ["amd64"]
-        - key: karpenter.k8s.aws/instance-category
+        - key: kubernetes.io/os
           operator: In
-          values: ["t"]
-        - key: karpenter.k8s.aws/instance-size
+          values: ["linux"]
+        - key: karpenter.k8s.aws/instance-family
           operator: In
-          values: ["small", "medium"]
+          values: ["t3"]
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
