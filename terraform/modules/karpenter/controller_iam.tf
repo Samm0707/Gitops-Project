@@ -65,6 +65,16 @@ data "aws_iam_policy_document" "karpenter_controller_permissions" {
     resources = ["*"]
   }
   statement {
+    # Missing originally — Karpenter calls this to resolve the cluster's VPC/pod
+    # CIDR ranges (needed to tell node IPs apart from pod IPs when scheduling).
+    # Without it, EC2NodeClass gets stuck on "Failed to detect the cluster CIDR"
+    # forever, exactly what you hit. Read-only, describes cluster metadata only.
+    sid       = "AllowClusterCIDRDetection"
+    effect    = "Allow"
+    actions   = ["eks:DescribeCluster"]
+    resources = ["*"]
+  }
+  statement {
     sid       = "AllowPassingNodeRole"
     effect    = "Allow"
     actions   = ["iam:PassRole"]
