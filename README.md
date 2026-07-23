@@ -82,10 +82,7 @@ flowchart LR
     Tempo --> Grafana
 ```
 
-> 📸 **Screenshot #1 here** — see [Screenshots Guide](#-screenshots-guide)
-> 
-
----
+<img width="1294" height="312" alt="Screenshot 2026-07-23 at 5 17 42 PM" src="https://github.com/user-attachments/assets/f6efb6a7-2252-49b1-8a0d-151ad72adbfd" />
 
 ## 📁 Repository Structure
 
@@ -134,16 +131,14 @@ Gitops-Project/
 
 ---
 
-## ⚙️ Prerequisites
+## Prerequisites
 
 - AWS account with an IAM user for local Terraform runs
 - AWS CLI v2, Terraform CLI, `kubectl`, `helm`, `argocd` CLI, `docker`, `jq`
 - GitHub account (repos + Actions minutes)
 - `kubectl-argo-rollouts` plugin (`brew install argoproj/tap/kubectl-argo-rollouts`)
 
----
-
-## 🚀 Build Guide — Phase by Phase
+##  Build Guide — Phase by Phase
 
 ### Phase 0 — Foundation
 One-time state backend, applied locally (this is the only Terraform config allowed to use local state — it creates the remote backend everything else depends on):
@@ -152,6 +147,10 @@ cd terraform/bootstrap
 terraform init && terraform plan && terraform apply
 ```
 Creates: S3 bucket (versioned, encrypted, public access blocked) + DynamoDB lock table.
+<img width="1662" height="873" alt="Screenshot 2026-07-23 at 6 05 07 PM" src="https://github.com/user-attachments/assets/44e91b03-c086-4139-8054-fc89a13ecc5b" />
+
+<img width="1669" height="904" alt="Screenshot 2026-07-23 at 6 06 31 PM" src="https://github.com/user-attachments/assets/9bb84885-dbbd-42ba-b817-9d01d0c375e8" />
+
 
 ### Phase 1 — Infrastructure
 ```bash
@@ -162,7 +161,15 @@ kubectl get nodes
 ```
 Creates: VPC (public/private subnets, NAT, IGW), EKS cluster + managed node group, ECR repository, RDS MySQL instance with credentials in Secrets Manager.
 
-> 📸 **Screenshots #2, #3, #4 here**
+<img width="1414" height="883" alt="Screenshot 2026-07-23 at 5 18 38 PM" src="https://github.com/user-attachments/assets/b01927d5-2513-414d-a62e-4296fecff0b1" />
+
+<img width="1669" height="897" alt="Screenshot 2026-07-23 at 5 19 33 PM" src="https://github.com/user-attachments/assets/2a548447-a0d8-4a8b-80d8-389a9cc59994" />
+
+<img width="1457" height="866" alt="Screenshot 2026-07-23 at 5 20 36 PM" src="https://github.com/user-attachments/assets/fa048c9e-f161-466c-ae0a-c8defdf4b660" />
+
+
+
+
 
 ### Phase 2 — CI Pipeline
 GitHub Actions workflow (`.github/workflows/ci.yml`) triggered on push to `app/HRMS/**`:
@@ -173,7 +180,10 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) triggered on push to `app/H
 
 Authenticated via GitHub OIDC federation — the trust policy matches on `repository` and `ref` token claims (not the `sub` string, which GitHub changed to an immutable ID-based format for repos created after July 15, 2026).
 
-> 📸 **Screenshots #5, #6 here**
+<img width="1650" height="863" alt="Screenshot 2026-07-23 at 5 21 32 PM" src="https://github.com/user-attachments/assets/92ecc641-de1b-446c-94c5-f74c08ee016c" />
+
+<img width="1344" height="941" alt="Screenshot 2026-07-23 at 5 23 04 PM" src="https://github.com/user-attachments/assets/4597535e-fe77-4822-8c2f-e5a3d3f19aa3" />
+
 
 ### Phase 3 — GitOps Delivery
 ```bash
@@ -189,7 +199,11 @@ kubectl scale deployment hrms-app -n hrms --replicas=3   # manual, out-of-band c
 kubectl get pods -n hrms -w                                # watch ArgoCD revert it to match Git
 ```
 
-> 📸 **Screenshots #7, #8 here**
+<img width="1669" height="1009" alt="Screenshot 2026-07-23 at 5 31 27 PM" src="https://github.com/user-attachments/assets/56913033-10c9-4a91-a15e-aa813e1b8348" />
+
+<img width="1664" height="802" alt="Screenshot 2026-07-23 at 5 37 14 PM" src="https://github.com/user-attachments/assets/df9a1bf5-0af2-40ae-9d6a-8a398737afa1" />
+
+
 
 ### Phase 4 — Progressive Delivery
 Converted the Deployment to a `Rollout` with canary steps and a Prometheus-backed `AnalysisTemplate` checking error rate against Micrometer's `http_server_requests_seconds_count` metric.
@@ -204,7 +218,11 @@ kubectl argo rollouts get rollout hrms-app -n hrms --watch
 ```
 Expected: canary starts at 10%, `AnalysisRun` queries Prometheus, detects >5% error rate, fails — Argo Rollouts aborts and reverts to the last stable revision automatically. Then set `CHAOS_ERROR_RATE` back to `"0"` and push.
 
-> 📸 **Screenshots #9, #10 here**
+<img width="1321" height="1014" alt="Screenshot 2026-07-23 at 5 38 37 PM" src="https://github.com/user-attachments/assets/f6f2e61b-09e7-4dd8-8638-87c729da7977" />
+
+<img width="1676" height="891" alt="Screenshot 2026-07-23 at 5 37 37 PM" src="https://github.com/user-attachments/assets/efe2fa50-c89a-4228-821d-d91fa5ce5c25" />
+
+
 
 ### Phase 5 — Autoscaling & Observability
 
@@ -229,6 +247,9 @@ helm install loki grafana/loki-stack --namespace monitoring \
 Grafana dashboard (request rate, error rate, pod CPU, node capacity type, HRMS logs) provisioned as code via the Grafana Terraform provider in `terraform/modules/grafana-dashboard/` — not clicked together manually.
 <img width="906" height="96" alt="Screenshot 2026-07-23 at 5 52 14 PM" src="https://github.com/user-attachments/assets/fb6eff8a-73db-43b9-aa19-d1ef79d7dd61" />
 
+<img width="1679" height="1011" alt="Screenshot 2026-07-23 at 5 46 35 PM" src="https://github.com/user-attachments/assets/c75bd9de-176b-4470-9f92-919490ade3e5" />
+
+<img width="1443" height="799" alt="Screenshot 2026-07-23 at 5 45 38 PM" src="https://github.com/user-attachments/assets/ebc65d51-5ff6-490f-9ba0-0d3b32dedee4" />
 
 ---
 
