@@ -83,6 +83,7 @@ flowchart LR
 ```
 
 > 📸 **Screenshot #1 here** — see [Screenshots Guide](#-screenshots-guide)
+> 
 
 ---
 
@@ -226,6 +227,7 @@ helm install loki grafana/loki-stack --namespace monitoring \
   --set grafana.enabled=false --set promtail.enabled=true --set loki.persistence.enabled=false
 ```
 Grafana dashboard (request rate, error rate, pod CPU, node capacity type, HRMS logs) provisioned as code via the Grafana Terraform provider in `terraform/modules/grafana-dashboard/` — not clicked together manually.
+<img width="906" height="96" alt="Screenshot 2026-07-23 at 5 52 14 PM" src="https://github.com/user-attachments/assets/fb6eff8a-73db-43b9-aa19-d1ef79d7dd61" />
 
 
 ---
