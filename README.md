@@ -227,7 +227,6 @@ helm install loki grafana/loki-stack --namespace monitoring \
 ```
 Grafana dashboard (request rate, error rate, pod CPU, node capacity type, HRMS logs) provisioned as code via the Grafana Terraform provider in `terraform/modules/grafana-dashboard/` — not clicked together manually.
 
-> 📸 **Screenshots #11, #12, #13, #14 here**
 
 ---
 
@@ -245,7 +244,7 @@ Grafana dashboard (request rate, error rate, pod CPU, node capacity type, HRMS l
 
 ## 🧯 Problems We Faced — Real Incident Log
 
-This project hit real, non-trivial issues — documented honestly rather than presenting a sanitized "it just worked" narrative.
+This project hit real, non-trivial issues :
 
 | # | Issue | Root Cause | Fix |
 |---|---|---|---|
@@ -283,31 +282,6 @@ Approximate, `ap-south-1`, assuming the full stack is left running 24/7 — the 
 | Elastic IP (public IPv4 charge) | $0.005/hr | ~$3.6 |
 | **Total if left running all month** | | **~$160-170** |
 
-Realistic per-session cost (a few hours, then destroyed): well under 100 rupees per session.
-
----
-
-## 📸 Screenshots Guide
-
-Save every screenshot to `docs/screenshots/` using the exact filename below - the README links already point there.
-
-| # | Filename | What to Capture | Where to Get It |
-|---|---|---|---|
-| 1 | `01-architecture-context.png` | *(Optional)* A high-level view of the running system - e.g. the AWS Console resource groups page or VPC resource map | AWS Console -> VPC -> your VPC -> **Resource map** tab |
-| 2 | `02-eks-cluster-overview.png` | EKS cluster overview: version, endpoint, node count | AWS Console -> EKS -> `prod-xrms-eks` -> **Overview** tab |
-| 3 | `03-ecr-scanned-image.png` | An image in ECR showing tag, push date, and scan status | AWS Console -> ECR -> `prod-xrms-hrms-app` -> click the latest image tag |
-| 4 | `04-rds-instance.png` | RDS instance details: engine, class, endpoint | AWS Console -> RDS -> Databases -> `prod-xrms-mysql` |
-| 5 | `05-github-actions-pipeline.png` | Full CI pipeline run, all 4 jobs green | GitHub repo -> **Actions** tab -> click your latest successful run |
-| 6 | `06-trivy-scan-clean.png` | Expanded log of the Trivy image scan step showing `0` critical vulnerabilities | Inside the Actions run -> `build-scan-push` job -> expand "Scan image with Trivy" step |
-| 7 | `07-argocd-dashboard.png` | ArgoCD Applications view: `root-app`, `hrms-app`, `karpenter-config` all `Synced`/`Healthy` | See "Opening ArgoCD" below |
-| 8 | `08-argocd-drift-heal.png` | An Application's Sync status flipping `OutOfSync -> Synced` after a manual change, or the Events tab showing the health transition after self-heal | Same ArgoCD UI -> click into `hrms-app` -> **Events** or **App Details** |
-| 9 | `09-canary-progress.png` | Terminal output of a canary mid-rollout showing `SetWeight: 10/50/100` and `AnalysisRun` | Run `kubectl argo rollouts get rollout hrms-app -n hrms --watch` during a real deploy |
-| 10 | `10-automated-rollback.png` | Terminal output showing `AnalysisRun Failed` and the Rollout reverting automatically | Same command, during the chaos-filter demo (`CHAOS_ERROR_RATE=0.5`) |
-| 11 | `11-karpenter-spot-node.png` | `kubectl get nodes -L karpenter.sh/capacity-type,node.kubernetes.io/instance-type` showing a `spot` node alongside the on-demand floor | Terminal |
-| 12 | `12-karpenter-nodeclaim.png` | `kubectl get nodeclaims` showing a claim reach `READY: True` | Terminal |
-| 13 | `13-grafana-dashboard.png` | The full "HRMS - Platform Overview" dashboard with real data in all 5 panels | See "Opening Grafana" below |
-| 14 | `14-prometheus-targets.png` | Prometheus targets page showing all scrape targets `UP` | See "Opening Prometheus" below |
-
 ### Opening ArgoCD
 ```bash
 kubectl port-forward svc/argocd-server -n argocd 8080:443
@@ -327,14 +301,3 @@ Visit `http://localhost:3000` - login `admin` / the password printed above. Dash
 kubectl port-forward svc/prometheus-kube-prometheus-prometheus -n monitoring 9090:9090
 ```
 Visit `http://localhost:9090/targets`.
-
----
-
-## 🔮 Future Improvements
-
-- Pin all GitHub Actions to full commit SHAs, not version tags (currently only Trivy's known-supply-chain-incident history is mitigated this way)
-- Re-enable and fix `HrmsApplicationTests` against an in-memory H2 database instead of skipping tests in CI
-- Multi-AZ RDS for genuine production-grade database resilience
-- EKS control plane endpoint restricted to specific CIDRs instead of open public access
-- Fix the `argocd-applicationset-controller` CrashLoopBackOff (unused CRD, not currently blocking anything)
-- External Secrets Operator to sync Kubernetes Secrets from AWS Secrets Manager declaratively, instead of the current one-time manual `kubectl create secret`
