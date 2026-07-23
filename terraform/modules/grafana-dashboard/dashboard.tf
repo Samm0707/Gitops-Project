@@ -53,16 +53,16 @@ resource "grafana_dashboard" "hrms_overview" {
           refId = "A"
         }]
       },
-     {
+      {
         id = 5
         title = "HRMS App Logs"
         type = "logs"
         gridPos = { h = 8, w = 24, x = 0, y = 16 }
-        datasource = { type = "loki", uid = "loki" }
+        datasource = { type = "loki", uid = "P8E80F9AEF21F6940" }
         targets = [{
           expr = "{namespace=\"hrms\"}"
           refId = "A"
-          datasource = { type = "loki", uid = "loki" }
+          datasource = { type = "loki", uid = "P8E80F9AEF21F6940" }
         }]
       }
     ]
