@@ -203,6 +203,7 @@ kubectl get pods -n hrms -w                                # watch ArgoCD revert
 
 <img width="1664" height="802" alt="Screenshot 2026-07-23 at 5 37 14 PM" src="https://github.com/user-attachments/assets/df9a1bf5-0af2-40ae-9d6a-8a398737afa1" />
 
+<img width="1672" height="606" alt="Screenshot 2026-07-23 at 6 11 16 PM" src="https://github.com/user-attachments/assets/555a6410-3778-4284-ad2b-64cb1544c451" />
 
 
 ### Phase 4 — Progressive Delivery
