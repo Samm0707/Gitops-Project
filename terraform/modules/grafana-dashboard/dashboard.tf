@@ -27,7 +27,7 @@ resource "grafana_dashboard" "hrms_overview" {
         gridPos = { h = 8, w = 12, x = 12, y = 0 }
         datasource = { type = "prometheus", uid = "prometheus" }
         targets = [{
-          expr = "100 * sum(rate(http_server_requests_seconds_count{application=\"HRMS\",status=~\"5..\"}[2m])) / sum(rate(http_server_requests_seconds_count{application=\"HRMS\"}[2m]))"
+          expr = "100 * ((sum(rate(http_server_requests_seconds_count{application=\"HRMS\",status=~\"5..\"}[2m])) or vector(0)) / sum(rate(http_server_requests_seconds_count{application=\"HRMS\"}[2m])))"
           refId = "A"
         }]
       },
@@ -60,7 +60,7 @@ resource "grafana_dashboard" "hrms_overview" {
         gridPos = { h = 8, w = 24, x = 0, y = 16 }
         datasource = { type = "loki", uid = "loki" }
         targets = [{
-          expr = "{namespace=\"hrms\"} |= \"ERROR\""
+          expr = "{namespace=\"hrms\"}"
           refId = "A"
         }]
       }
